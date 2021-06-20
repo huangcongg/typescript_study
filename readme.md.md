@@ -236,7 +236,6 @@ function sum(...result:number[]):number{
   
   w.work();
   ```
-  
 
 ### 1.ts中的类定义
 
@@ -1400,5 +1399,447 @@ console.log(res);
 //获取article表数据
 var aRes = articleModel.get(1);
 console.log(aRes);
+```
+
+# 十一、命名空间、命名空间块化
+
+```typescript
+/**
+命名空间：
+	在代码量较大的情况下，为了避免各种变量命名相冲突，可将相似功能的函数、类、接口等放置到命名空间内
+	同java的包、.net的命名空间不一样，Typescript的命名空间可以将代码包裹起来，只对外暴露需要在外部访问的对象。命名空间内的对象通过expression
+命名空间和模块的区别：
+	命名空间：内部模块，主要用于组织代码，避免命名冲突。
+	模	块：ts的外部模块的简称，侧重代码的复用，一个模块里可能会有多个命名空间。
+*/
+namespace A{
+    interface Animal {
+        name: string;
+        eat(): void;
+    }
+    export class Dog implements Animal {
+        name: string;
+        constructor(theName: string) {
+            this.name = theName;
+        }
+        eat() {
+            console.log(`${this.name}吃狗粮`);
+        }
+    }
+    export class Cat implements Animal {
+        name: string;
+        constructor(theName: string) {
+            this.name = theName;
+        }
+        eat() {
+            console.log(`${this.name}吃猫粮`);
+        }
+    }
+}
+var d = new A.Dog('狼狗');
+d.eat();
+    
+namespace B{
+    interface Animal {
+        name: string;
+        eat(): void;
+    }
+    export class Dog implements Animal {
+        name: string;
+        constructor(theName: string) {
+            this.name = theName;
+        }
+        eat() {
+            console.log(`${this.name}吃狗粮`);
+        }
+    }
+    export class Cat implements Animal {
+        name: string;
+        constructor(theName: string) {
+            this.name = theName;
+        }
+        eat() {
+            console.log(`${this.name}吃猫粮`);
+        }
+    }
+}
+var c = new B.Dog('猫粮');
+c.eat();
+```
+
+命名空间封装成模块：
+
+```typescript
+// modules/animal.ts
+export namespace A{
+    interface Animal {
+        name: string;
+        eat(): void;
+    }
+    export class Dog implements Animal {
+        name: string;
+        constructor(theName: string) {
+            this.name = theName;
+        }
+        eat() {
+            console.log(`${this.name}吃狗粮`);
+        }
+    }
+    export class Cat implements Animal {
+        name: string;
+        constructor(theName: string) {
+            this.name = theName;
+        }
+        eat() {
+            console.log(`${this.name}吃猫粮`);
+        }
+    }
+}
+    
+export namespace B{
+    interface Animal {
+        name: string;
+        eat(): void;
+    }
+    export class Dog implements Animal {
+        name: string;
+        constructor(theName: string) {
+            this.name = theName;
+        }
+        eat() {
+            console.log(`${this.name}吃狗粮`);
+        }
+    }
+    export class Cat implements Animal {
+        name: string;
+        constructor(theName: string) {
+            this.name = theName;
+        }
+        eat() {
+            console.log(`${this.name}吃猫粮`);
+        }
+    }
+}
+```
+
+```typescript
+// index.ts
+import {A,B} from './modules/animal'; // 以前的引入方式现在不用了 /// <reference path="./modules/animal.ts"/>
+var d = new A.Dog('小黑');
+d.eat();
+
+var dog = new B.dog('小花');
+dog.eat();
+```
+
+# 十二、装饰器
+
+* 装饰器：是一种**特殊类型的声明**，它能够被附加到类声明、方法、属性或参数上，可以修改类的行为。
+* 通俗的讲装饰器就是一个方法，可以注入到类、方法、属性参数上来**扩展**类、属性、方法、参数的功能。
+* 常见的装饰器有：类装饰器、属性装饰器、方法装饰器、参数装饰器
+* 装饰器的写法：普通装饰器（无法传参）、装饰器工厂（可传参）
+* 装饰器是过去几年中js最大的成就之一，已是**ES7**的标准特性之一
+
+## 1.类装饰器：
+
+类装饰器在类声明之前被声明（紧靠着类声明）。类装饰器应用于类构造函数，可以用来监视、修改或替换类定义。传入一个参数
+
+### 1.1 类装饰器：普通装饰器（无法传参）
+
+```typescript
+/*
+	装饰器：是一种特殊类型的声明，它能够被附加到类声明、方法、属性或参数上，可以修改类的行为。
+	通俗的讲装饰器就是一个方法，可以注入到类、方法、属性参数上来扩展类、属性、方法、参数的功能。
+	常见的装饰器有：类装饰器、属性装饰器、方法装饰器、参数装饰器
+	装饰器的写法：普通装饰器（无法传参）、装饰器工厂（可传参）
+	装饰器是过去几年中js最大的成就之一，已是ES7的标准特性之一
+*/
+//1.类装饰器：类装饰器在类声明之前被声明（紧靠着类声明）。类装饰器应用于类构造函数，可以用来监视、修改或替换类定义。传入一个参数
+
+//1.1 类装饰器：普通装饰器（无法传参）
+function logClass(params:any){
+    console.log(params)
+    //params就是当前类
+    params.prototype.apiUrl = '动态扩展的属性'; //给这个类扩展属性apiUrl
+    params.prototype.run = function(){
+        console.log('我是一个run方法');
+    }
+}
+@logClass
+class HttpClient{
+    constructor(){
+        
+    }
+    getData(){
+        
+    }
+}
+var http:any = new HttpClient();
+console.log(http.apiUrl);
+
+http.run();
+
+
+```
+
+### 1.2类装饰器：装饰器工厂（可传参）
+
+```typescript
+function logClass(params:string){
+    return function(target:any){
+        console.log(target);
+        console.log(params);
+        target.prototype.apiUrl = params;
+    }
+}
+@logClass('http://www.itying.com/api')
+class HttpClient{
+    constructor(){
+        
+    }
+    getData(){
+        
+    }
+}
+var http:any = new HttpClient();
+console.log(http.apiUrl);
+```
+
+下面是一个**重载构造函数**的例子。
+
+类装饰器表达式会在运行时当作函数被调用，类的构造函数作为其唯一的参数。
+
+如果类装饰器返回一个值，它会使用提供的构造函数来替换类的声明。
+
+```typescript
+function logClass(target:any){
+    console.log(target);
+    return class extends target{
+        apiUrl:any = '我是修改后的数据';
+        getData(){
+            this.apiUrl += '----';
+            console.log(this.apiUrl);
+        }
+    }
+}
+@logClass
+class HttpClient{
+    public apiUrl:string | undefined;
+    constructor(){
+        this.apiUrl = '我是构造函数里面的apiUrl';
+    }
+    getData(){
+        console.log(this.apiUrl);
+    }
+}
+var http = new HttpClient();
+http.getData();
+```
+
+## 2.属性装饰器
+
+属性装饰器表达式会在运行时当作函数被调用，传入下列两个参数：
+
+1. 对于静态成员来说是类的构造函数，对于实例成员是类的原型对象。
+2. 成员的名字。
+
+```typescript
+// 类装饰器
+function logClass(params:string){
+    return function(target:any){
+        //console.log(target);
+        //console.log(params);
+    }
+}
+// 属性装饰器
+function logProperty(params:any){
+    return function(target:any,attr:any){
+        console.log(target,attr);
+        target[attr] = params;
+    }
+}
+@logClass('xxxx')
+class HttpClient{
+    @logProperty('http://itying.com')
+    public url:any | undefined;
+    constructor(){
+        
+    }
+    getData(){
+        console.log(this.url);
+    }
+}
+var http = new HttpClient();
+http.getData();
+```
+
+## 3.方法装饰器
+
+它会被应用到方法的**属性描述符**上，可以用来**监视、修改、替换**方法定义。
+
+方法装饰器会在运行时传入下列3个参数：
+
+1. 对于静态成员来说是类的**构造函数**，对于实例成员是类的**原型对象**。
+2. 成员的**名字**。
+3. 成员的属性**描述**符。
+
+```typescript
+// 方法装饰器1
+function get(params:any){
+    return function(target:any,methodName:any,desc:any){
+        console.log(target);
+        console.log(methodName);
+        console.log(desc);
+        
+        target.apiUrl = 'xxx';
+        target.run = function(){
+            console.log('run');
+        }
+    }
+}
+class HttpClient{
+    public url:any | undefined;
+    constructor(){
+        
+    }
+    @get('http://www.itying.com')
+    getData(){
+        console.log(this.url);
+    }
+}
+var http:any = new HttpClient();
+console.log(http.apiUrl);
+http.run();
+```
+
+```typescript
+// 方法装饰器2:用方法装饰器修改方法
+function get(params:any){
+    return function(target:any,methodName:any,desc:any){
+        console.log(target);
+        console.log(methodName);
+        console.log(desc.value);
+        
+        // 修改装饰器的方法，把装饰器方法里面传入的所有参数改为string类型
+        // 1、保存当前的方法
+        var oMethod = desc.value;
+        desc.value = function(...args:any[]){
+            args = args.map((value)=>{
+                return String(value);
+            })
+            console.log(args);
+            
+            oMethod.apply(this,args); //对象冒充
+        }
+    }
+}
+class HttpClient{
+    public url:any | undefined;
+    constructor(){ 
+    }
+    @get('http://www.itying.com')
+    getData(...args:any[]){
+        console.log(args);
+        console.log('我是getData里面的方法');
+    }
+}
+var http = new HttpClient();
+http.getData(123,'xxx');
+```
+
+## 4.方法参数装饰器
+
+参数装饰器表达式会在运行时当作函数被调用，可以使用参数装饰器为类的原型增加一些元素数据，传入下列3个参数：
+
+1. 对于静态成员来说是类的**构造函数**，对于实例成员是类的**原型对象**。
+2. 方法的**名字**。
+3. 参数在函数参数列表中的**索引**。
+
+```typescript
+function logParams(params:any){
+    return function(target:any,methodName:any,paramsIndex:any){
+        console.log(params);
+        console.log(target);
+        console.log(methodName);
+        console.log(paramsIndex);
+        target.apiUrl = params;
+    }
+}
+class HttpClient{
+    public url:any | undefined;
+    constructor(){ 
+    }
+    getData(@logParams('xxxxx') uuid:any){
+        console.log(uuid);
+    }
+}
+var http:any = new HttpClient();
+http.getData(123456);
+console.log(http.apiUrl);
+```
+
+## 5.装饰器执行顺序
+
+* 属性＞方法＞方法参数＞类
+* 如果有多个同样的装饰器，他会先执行后面的。
+
+```typescript
+function logClass1(params:string){
+    return function(target:any){
+        console.log('类装饰器1');
+    }
+}
+function logClass2(params:string){
+    return function(target:any){
+        console.log('类装饰器2');
+    }
+}
+function logAttribute(params?:string){
+    return function(target:any,attrName:any){
+        console.log('属性装饰器');
+    }
+}
+function logMethod(params?:string){
+    return function(target:any,attrName:any,desc:any){
+        console.log('方法装饰器');
+    }
+}
+function logParams1(params?:string){
+    return function(target:any,attrName:any,desc:any){
+        console.log('方法参数装饰器1');
+    }
+}
+function logParams2(params?:string){
+    return function(target:any,attrName:any,desc:any){
+        console.log('方法参数装饰器2');
+    }
+}
+@logClass1('http://www.itying.com/api')
+@logClass2('xxx')
+class HttpClient{
+    
+    @logAttribute()
+    public apiUrl:string | undefined;
+    
+    constructor(){ 
+    }
+    
+    @logMethod()
+    getData(){
+        return true;
+    }
+    
+    setData(@logParams1() attr1:any,@logParams2() attr2:any){
+        
+    }
+}
+
+//打印结果
+属性装饰器
+方法装饰器
+方法参数装饰器2
+方法参数装饰器1
+类装饰器2
+类装饰器1
 ```
 
