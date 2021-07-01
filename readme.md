@@ -176,6 +176,107 @@ function run():void{
 
 ###  5、never类型：是其他类型（包括null和undefined）的子类型，代表从不会出现的值。
 
+### 类型补充
+
+#### 1) 未声明类型的变量
+
+变量如果在声明的时候，未指定其类型，那么它会被识别为任意值类型：
+
+```typescript
+let something;
+something = 'seven';
+something = 7;
+
+something.setName('Tom');
+```
+
+等价于
+
+```typescript
+let something: any;
+something = 'seven';
+something = 7;
+
+something.setName('Tom');
+```
+
+#### 2) 类型推论
+
+以下代码虽然没有指定类型，但是会在编译的时候报错：
+
+```typescript
+let myFavoriteNumber = 'seven';
+myFavoriteNumber = 7;
+
+// index.ts(2,1): error TS2322: Type 'number' is not assignable to type 'string'.
+```
+
+事实上，它等价于：
+
+```typescript
+let myFavoriteNumber: string = 'seven';
+myFavoriteNumber = 7;
+
+// index.ts(2,1): error TS2322: Type 'number' is not assignable to type 'string'.
+```
+
+#### 3) 联合类型
+
+联合类型（Union Types）表示取值可以为多种类型中的一种。联合类型使用 `|` 分隔每个类型。
+
+##### 简单的例子
+
+```typescript
+let myFavoriteNumber: string | number;
+myFavoriteNumber = 'seven';
+myFavoriteNumber = 7;
+```
+
+```typescript
+let myFavoriteNumber: string | number;
+myFavoriteNumber = true;
+
+// index.ts(2,1): error TS2322: Type 'boolean' is not assignable to type 'string | number'.
+//   Type 'boolean' is not assignable to type 'number'.
+```
+
+##### 访问联合类型的属性或方法
+
+当 TypeScript 不确定一个联合类型的变量到底是哪个类型的时候，我们**只能访问此联合类型的所有类型里共有的属性或方法**：
+
+```ts
+function getLength(something: string | number): number {
+    return something.length;
+}
+
+// index.ts(2,22): error TS2339: Property 'length' does not exist on type 'string | number'.
+//   Property 'length' does not exist on type 'number'.
+```
+
+```ts
+function getString(something: string | number): string {
+    return something.toString();
+}
+```
+
+联合类型的变量在被赋值的时候，会根据类型推论的规则推断出一个类型：
+
+```ts
+let myFavoriteNumber: string | number;
+myFavoriteNumber = 'seven';
+console.log(myFavoriteNumber.length); // 5
+myFavoriteNumber = 7;
+console.log(myFavoriteNumber.length); // 编译时报错
+
+// index.ts(5,30): error TS2339: Property 'length' does not exist on type 'number'.
+```
+
+#### 4）keyof操作符
+
+TypeScript 允许我们遍历某种类型的属性，并通过 keyof 操作符提取其属性的名称。**`keyof` 操作符是在 TypeScript 2.1 版本引入的，该操作符可以用于获取某种类型的所有键，其返回类型是联合类型。**
+
+
+
 ## 四、函数
 
 ###  1、ts中的函数可选参数要在参数名后加？
