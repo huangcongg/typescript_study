@@ -4323,7 +4323,7 @@ person.on("firstNameChanged", (newValue) => {
 
 注意，在监听事件“ firstNameChanged”时，不仅仅是“ firstName”，模板文本提供了一种在类型系统中处理这种类型的字符串操作的方法:
 
-```typescript
+```c#
 type PropEventSource<Type> = {
     on(eventName: `${string & keyof Type}Changed`, callback: (newValue: any) => void): void;
 };
@@ -4334,4 +4334,1798 @@ declare function makeWatchedObject<Type>(obj: Type): Type & PropEventSource<Type
 ```
 
 有了这个，我们就可以构建一些在给出错误属性时会出错的东西:
+
+```typescript
+const person = makeWatchedObject({
+  firstName: "Saoirse",
+  lastName: "Ronan",
+  age: 26
+});
+
+person.on("firstNameChanged", () => {});
+
+// It's typo-resistent
+person.on("firstName", () => {});
+/Argument of type '"firstName"' is not assignable to parameter of type '"firstNameChanged" | "lastNameChanged" | "ageChanged"'.
+
+person.on("frstNameChanged", () => {});
+/Argument of type '"frstNameChanged"' is not assignable to parameter of type '"firstNameChanged" | "lastNameChanged" | "ageChanged"'.
+
+```
+
+#### 使用模板文字进行推理
+
+请注意最后的示例如何没有重用原始值的类型。回调函数使用了 any。模板文字类型可以从替换位置推断。
+
+我们可以使上一个示例成为泛型，从 eventName 字符串的各个部分推断出关联的属性。
+
+```c#
+type PropEventSource<Type> = {
+    on<Key extends string & keyof Type>
+        (eventName: `${Key}Changed`, callback: (newValue: Type[Key]) => void ): void;
+};
+
+declare function makeWatchedObject<Type>(obj: Type): Type & PropEventSource<Type>;
+
+const person = makeWatchedObject({
+  firstName: "Saoirse",
+  lastName: "Ronan",
+  age: 26
+});
+
+person.on("firstNameChanged", newName => {
+                                
+(parameter) newName: string
+    console.log(`new name is ${newName.toUpperCase()}`);
+});
+
+person.on("ageChanged", newAge => {
+                          
+(parameter) newAge: number
+    if (newAge < 0) {
+        console.warn("warning! negative age");
+    }
+})
+```
+
+在这里，我们使on成为了一个泛型方法。
+
+当用户使用字符串“ firstnamecchanged”调用时，TypeScript 将尝试推断 Key 的正确类型。为此，它将键与“ Changed”之前的内容进行匹配，并推断字符串“ firstName”。一旦 TypeScript 发现了这一点，on 方法就可以获取原始对象的 firstName 类型，在本例中是 string。类似地，当使用“ agecchanged”调用时，TypeScript 会查找属性年龄的类型，即 number。
+
+推理可以以不同的方式组合，通常用于解构字符串，并以不同的方式重构它们。
+
+####  内部字符串操作类型
+
+为了帮助进行字符串操作，TypeScript 包含了一组可用于字符串操作的类型。这些类型是编译器内置的，用于提高性能，在.d.ts文件不能被发现，包含在ts中。
+
+##### `Uppercase<StringType>`
+
+将字符串中的每个字符转换为大写版本。
+
+###### Example 例子
+
+```c#
+type Greeting = "Hello, world"
+type ShoutyGreeting = Uppercase<Greeting>
+           //type ShoutyGreeting = "HELLO, WORLD"
+
+type ASCIICacheKey<Str extends string> = `ID-${Uppercase<Str>}`
+type MainID = ASCIICacheKey<"my_app">
+       //type MainID = "ID-MY_APP"
+```
+
+##### `Lowercase<StringType>`
+
+将字符串中的每个字符转换为等效的小写形式。
+
+###### Example 例子
+
+```c#
+type Greeting = "Hello, world"
+type QuietGreeting = Lowercase<Greeting>
+          //type QuietGreeting = "hello, world"
+
+type ASCIICacheKey<Str extends string> = `id-${Lowercase<Str>}`
+type MainID = ASCIICacheKey<"MY_APP">
+       //type MainID = "id-my_app"
+```
+
+##### `Capitalize<StringType>`
+
+将字符串中的第一个字符转换为等效的大写字母。
+
+###### Example 例子
+
+```typescript
+type LowercaseGreeting = "hello, world";
+type Greeting = Capitalize<LowercaseGreeting>;
+        //type Greeting = "Hello, world"
+```
+
+##### `Uncapitalize<StringType>`
+
+将字符串中的第一个字符转换为等效的小写形式。
+
+###### Example 例子
+
+```typescript
+type UppercaseGreeting = "HELLO WORLD";
+type UncomfortableGreeting = Uncapitalize<UppercaseGreeting>;
+              //type UncomfortableGreeting = "hELLO WORLD"
+```
+
+**关于内部字符串操作类型的技术细节:**
+
+在 TypeScript 4.1中，这些内部函数的代码直接使用 JavaScript 字符串运行时函数进行操作，并且不知道区域设置。
+
+```typescript
+function applyStringMapping(symbol: Symbol, str: string) {
+    switch (intrinsicTypeKinds.get(symbol.escapedName as string)) {
+        case IntrinsicTypeKind.Uppercase: return str.toUpperCase();
+        case IntrinsicTypeKind.Lowercase: return str.toLowerCase();
+        case IntrinsicTypeKind.Capitalize: return str.charAt(0).toUpperCase() + str.slice(1);
+        case IntrinsicTypeKind.Uncapitalize: return str.charAt(0).toLowerCase() + str.slice(1);
+    }
+    return str;
+}
+```
+
+## 8、类
+
+TypeScript 提供了对 ES2015中引入的 class 关键字的完全支持。
+
+与其他 JavaScript 语言特性一样，TypeScript 添加了类型注释和其他语法，允许您表达类和其他类型之间的关系。
+
+### 类成员
+
+下面是最基本的类——一个空类:
+
+```typescript
+class Point {}
+```
+
+这个类还不是很有用，所以让我们开始添加一些成员。
+
+#### 字段
+
+字段声明在类上创建一个公共可写属性:
+
+```typescript
+class Point {
+  x: number;
+  y: number;
+}
+
+const pt = new Point();
+pt.x = 0;
+pt.y = 0;
+```
+
+与其他位置一样，类型注释是可选的，但如果没有指定，则为隐式注释为any。
+
+字段也可以有初始化器; 当类被实例化时，这些会自动运行:
+
+```typescript
+class Point {
+  x = 0;
+  y = 0;
+}
+
+const pt = new Point();
+// Prints 0, 0
+console.log(`${pt.x}, ${pt.y}`);
+```
+
+就像使用 const、 let 和 var 一样，class 属性的初始化器将用于推断其类型:
+
+```typescript
+const pt = new Point();
+pt.x = "0";
+/Type 'string' is not assignable to type 'number'.
+```
+
+##### `严格属性初始化`
+
+strictPropertyInitialization 设置控制是否需要在构造函数中初始化类字段。
+
+```typescript
+class BadGreeter {
+  name: string;
+/Property 'name' has no initializer and is not definitely assigned in the constructor.
+}
+```
+
+```typescript
+class GoodGreeter {
+  name: string;
+
+  constructor() {
+    this.name = "hello";
+  }
+}
+```
+
+注意，需要在构造函数本身中初始化字段。ts不会分析您从构造函数中调用的方法来检测初始化，因为派生类可能会覆盖这些方法并且无法初始化成员。
+
+如果您打算通过构造函数以外的方法(例如，可能有一个外部库为您填充了类的一部分)确切地初始化字段，那么您可以使用确定的赋值断言运算符，！:
+
+```typescript
+class OKGreeter {
+  // Not initialized, but no error
+  name!: string;
+}
+```
+
+##### `readonly只读`
+
+字段可以用 readonly 修饰符作为前缀。这样可以防止赋值到构造函数之外的字段。
+
+```typescript
+class Greeter {
+  readonly name: string = "world";
+
+  constructor(otherName?: string) {
+    if (otherName !== undefined) {
+      this.name = otherName;
+    }
+  }
+
+  err() {
+    this.name = "not ok";
+/Cannot assign to 'name' because it is a read-only property.
+  }
+}
+const g = new Greeter();
+g.name = "also not ok";
+/Cannot assign to 'name' because it is a read-only property.
+
+```
+
+#### Constructors构造函数
+
+类构造函数与函数非常相似。你可以添加带有类型注释、默认值的参数、和重载:
+
+```typescript
+class Point {
+  x: number;
+  y: number;
+
+  // Normal signature with defaults
+  constructor(x = 0, y = 0) {
+    this.x = x;
+    this.y = y;
+  }
+}
+```
+
+```typescript
+class Point {
+  // Overloads
+  constructor(x: number, y: string);
+  constructor(s: string);
+  constructor(xs: any, y?: any) {
+    // TBD
+  }
+}
+```
+
+类构造函数签名和函数签名只有一些区别:
+
+- 构造函数不能有类型参数——它们属于外部类声明，我们将在后面学习
+- 构造函数不能有返回类型注释——返回的总是类实例类型
+
+##### Super Calls 超级调用
+
+就像在 JavaScript 中一样，如果您有一个基类，那么在像`this.`这样使用这个基类的成员之前，您需要在构造函数体中调用 super ():
+
+```typescript
+class Base {
+  k = 4;
+}
+
+class Derived extends Base {
+  constructor() {
+    // Prints a wrong value in ES5; throws exception in ES6
+    console.log(this.k);
+/'super' must be called before accessing 'this' in the constructor of a derived class.
+    super();
+  }
+}
+```
+
+在 JavaScript 中，忘记调用 super 是一个很容易犯的错误，但是 TypeScript 会告诉你什么时候需要调用。
+
+#### Methods方法
+
+类上的函数属性称为方法。方法可以使用与函数和构造函数相同的所有类型注释:
+
+```typescript
+class Point {
+  x = 10;
+  y = 10;
+
+  scale(n: number): void {
+    this.x *= n;
+    this.y *= n;
+  }
+}
+```
+
+除了标准的类型注释，TypeScript 没有给方法添加任何新的内容。
+
+注意，在方法体内部，仍然必须通过以下`this.`访问字段和其他方法。方法体中不合格的名称总是指封闭域中的某些内容:
+
+```typescript
+let x: number = 0;
+
+class C {
+  x: string = "hello";
+
+  m() {
+    // This is trying to modify 'x' from line 1, not the class property
+    x = "world";
+/Type 'string' is not assignable to type 'number'.
+  }
+}
+```
+
+#### Getters / SettersGetters/Setters
+
+类也可以有访问器:
+
+```typescript
+class C {
+  _length = 0;
+  get length() {
+    return this._length;
+  }
+  set length(value) {
+    this._length = value;
+  }
+}
+```
+
+> 注意，有字段支持且没有额外逻辑的 get/set 对在 JavaScript 中很少有用。如果在 get/set 操作期间不需要添加额外的逻辑，那么可以公开public公共字段。
+
+ts对访问器有一些特殊的推理规则:
+
+- 如果`get` 存在但不存在`set`, 该属性会自动`readonly`
+- 如果没有指定 setter 参数的类型，则从 getter 的返回类型推断出来
+- Getters 和 setters 必须具有相同的[Member Visibility 成员能见度](https://www.typescriptlang.org/docs/handbook/2/classes.html#member-visibility)
+
+自从 TypeScript 4.3以来，可以使用不同类型的访问器来getting和setting。
+
+```typescript
+class Thing {
+    _size = 0;
+
+    get size(): number {
+        return this._size;
+    }
+
+    set size(value: string | number | boolean) {
+        let num = Number(value);
+
+        // Don't allow NaN, Infinity, etc
+
+        if (!Number.isFinite(num)) {
+            this._size = 0;
+            return;
+        }
+
+        this._size = num;
+    }
+}
+```
+
+#### Index Signatures索引签名
+
+类可以声明索引签名; 它们的工作方式与其他对象类型的索引签名相同:
+
+```typescript
+class MyClass {
+  [s: string]: boolean | ((s: string) => boolean);
+
+  check(s: string) {
+    return this[s] as boolean;
+  }
+}
+```
+
+因为索引签名类型还需要捕获方法的类型，所以很难有效地使用这些类型。一般来说，最好将索引数据存储在另一个位置，而不是存储在类实例本身。
+
+### Class Heritage类继承
+
+与其他具有面向对象特性的语言一样，JavaScript 中的类可以从基类继承。
+
+#### `implements`子句
+
+您可以使用 implements 子句来检查类是否满足特定的接口。如果类未能正确实现接口，将发出一个错误:
+
+```typescript
+interface Pingable {
+  ping(): void;
+}
+
+class Sonar implements Pingable {
+  ping() {
+    console.log("ping!");
+  }
+}
+
+class Ball implements Pingable {
+/Class 'Ball' incorrectly implements interface 'Pingable'.Property 'ping' is missing in type 'Ball' but required in type 'Pingable'.
+  pong() {
+    console.log("pong!");
+  }
+}
+```
+
+类也可能实现多接口，例如：`class C implements A, B {`.
+
+##### Cautions 警告
+
+一定要理解`implements`子句仅仅是检查类能够被当作一个接口类型。它根本就没有改变类或者方法的类型。一个常见的错误是假定一个`implements`子句会改变类类型-实际上它没有改变。
+
+```typescript
+interface Checkable {
+  check(name: string): boolean;
+}
+
+class NameChecker implements Checkable {
+  check(s) {
+/Parameter 's' implicitly has an 'any' type.
+    // Notice no error here
+    return s.toLowercse() === "ok";
+                 //any
+  }
+}
+
+```
+
+在本例中，我们可能预期 s 的类型会受到 check 的 name: string 参数的影响。它不受check的影响-implements 子句不会改变类体的检查方式或者推断出的类型。
+
+类似地，实现一个带有可选属性的接口并不会创建该属性:
+
+```typescript
+interface A {
+  x: number;
+  y?: number;
+}
+class C implements A {
+  x = 0;
+}
+const c = new C();
+c.y = 10;
+/Property 'y' does not exist on type 'C'.
+```
+
+#### `extends`子句
+
+类可以从基类扩展。派生类具有其基类的所有属性和方法，并定义其他成员。
+
+```typescript
+class Animal {
+  move() {
+    console.log("Moving along!");
+  }
+}
+
+class Dog extends Animal {
+  woof(times: number) {
+    for (let i = 0; i < times; i++) {
+      console.log("woof!");
+    }
+  }
+}
+
+const d = new Dog();
+// Base class method
+d.move();
+// Derived class method
+d.woof(3);
+```
+
+##### Overriding Methods 覆盖方法
+
+派生类还可以重写基类字段或属性。你可以使用`super.`语法来访问基类方法。请注意，由于 JavaScript 类是一个简单的查找对象，因此不存在“超级字段”的概念。
+
+TypeScript 强制派生类始终是其基类的子类型。
+
+例如，这里有一个合法的方法来覆盖一个方法:
+
+```typescript
+class Base {
+  greet() {
+    console.log("Hello, world!");
+  }
+}
+
+class Derived extends Base {
+  greet(name?: string) {
+    if (name === undefined) {
+      super.greet();
+    } else {
+      console.log(`Hello, ${name.toUpperCase()}`);
+    }
+  }
+}
+
+const d = new Derived();
+d.greet();
+d.greet("reader");
+```
+
+派生类遵循其基类契约非常重要。请记住，这是非常普遍的(并且总是合法的!)通过基类引用来引用派生类实例:
+
+```typescript
+// Alias the derived instance through a base class reference
+const b: Base = d;
+// No problem
+b.greet();
+```
+
+如果派生类没有遵循基类的规则怎么办？
+
+```typescript
+class Base {
+  greet() {
+    console.log("Hello, world!");
+  }
+}
+
+class Derived extends Base {
+  // Make this parameter required
+  greet(name: string) {
+/Property 'greet' in type 'Derived' is not assignable to the same property in base type 'Base'.Type '(name: string) => void' is not assignable to type '() => void'.
+    console.log(`Hello, ${name.toUpperCase()}`);
+  }
+}
+```
+
+如果我们不顾错误编译了这段代码，这个示例就会崩溃:
+
+```typescript
+const b: Base = new Derived();
+// Crashes because "name" will be undefined
+b.greet();
+```
+
+##### Initialization Order 初始化顺序
+
+在某些情况下，JavaScript 类初始化的顺序可能会令人惊讶:
+
+```typescript
+class Base {
+  name = "base";
+  constructor() {
+    console.log("My name is " + this.name);
+  }
+}
+
+class Derived extends Base {
+  name = "derived";
+}
+
+// Prints "base", not "derived"
+const d = new Derived();
+```
+
+这里发生了什么？
+
+由 JavaScript 定义的类初始化顺序是:
+
+- 初始化基类字段
+- 基类构造函数运行
+- 初始化派生类字段
+- 派生类构造函数运行
+
+这意味着基类构造函数在自己的构造函数中看到了自己的 name 值，因为派生类字段初始化还没有运行。
+
+##### 继承内置类型
+
+> 注意: 如果您不打算从数组、错误、映射等内置类型继承，则可以跳过本节
+
+在 ES2015中，返回对象的构造函数隐式地用this值替换任何 super (...)调用方。生成的构造函数代码必须捕获 super (...)的任何潜在返回值，并将其替换为这个返回值。
+
+因此，子类化 Error、 Array 和其他元素可能无法正常工作。这是因为 Error，Array 和类似的构造函数使用 ECMAScript 6的 new.target 来调整原型链; 然而，当调用 ECMAScript 5中的构造函数时，无法确保 new.target 的值。默认情况下，其他底层编译器通常具有相同的限制。
+
+对于下面这样的子类:
+
+```typescript
+class MsgError extends Error {
+  constructor(m: string) {
+    super(m);
+  }
+  sayHello() {
+    return "hello " + this.message;
+  }
+}
+```
+
+你会发现:
+
+- methods may be `undefined` on objects returned by constructing these subclasses, so calling `sayHello` will result in an error. 方法可能是`undefined`，通过构造这些子类返回的对象，所以调用`sayHello`会导致错误
+- `instanceof` 将在子类的实例和它们的实例之间被破坏，因此`(new MsgError()) instanceof `会返回`false`。
+
+作为建议，您可以在任何 super (...)调用之后立即手动调整原型。
+
+```typescript
+class MsgError extends Error {
+  constructor(m: string) {
+    super(m);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MsgError.prototype);
+  }
+
+  sayHello() {
+    return "hello " + this.message;
+  }
+}
+```
+
+但是，MsgError 的任何子类都必须手动设置原型。对于不支持 Object.setPrototypeOf 的运行时，您可以使用 _ proto _。
+
+不幸的是，这些变通方法不会在 Internet Explorer 10和之前起作用。人们可以手动地将方法从原型复制到实例本身(例如，MsgError.prototype 复制到实例本身) ，但是原型链本身不能修复。
+
+### Member Visibility成员可见性
+
+您可以使用 TypeScript 来控制类以外的代码是否可以看到某些方法或属性。
+
+#### `public`
+
+类成员的默认可见性是 public。 public 成员可以在任何地方访问:
+
+```typescript
+class Greeter {
+  public greet() {
+    console.log("hi!");
+  }
+}
+const g = new Greeter();
+g.greet();
+```
+
+因为 public 已经是默认的可见性修饰符，所以您不需要在类成员上编写它，但是可能出于样式/可读性的原因选择这样做。
+
+#### `protected`
+
+受保护成员只对它们在其中声明的类的子类可见。
+
+```typescript
+class Greeter {
+  public greet() {
+    console.log("Hello, " + this.getName());
+  }
+  protected getName() {
+    return "hi";
+  }
+}
+
+class SpecialGreeter extends Greeter {
+  public howdy() {
+    // OK to access protected member here
+    console.log("Howdy, " + this.getName());
+  }
+}
+const g = new SpecialGreeter();
+g.greet(); // OK
+g.getName();
+/Property 'getName' is protected and only accessible within class 'Greeter' and its subclasses.
+```
+
+##### 暴露保护成员
+
+派生类需要遵循其基类契约，但可以选择公开具有更多功能的基类的子类型。这包括使受保护成员公开:
+
+```typescript
+class Base {
+  protected m = 10;
+}
+class Derived extends Base {
+  // No modifier, so default is 'public'
+  m = 15;
+}
+const d = new Derived();
+console.log(d.m); // OK
+```
+
+请注意，Derived 已经能够自由读写 m，因此这并不会有意义地改变这种情况的“安全性”。这里需要注意的主要事情是，在派生类中，如果这种暴露不是有意的，那么我们需要小心重复 protected 修饰符。
+
+##### 跨等级访问`protected` 
+
+不同的 OOP 语言对于通过基类引用访问受保护成员是否合法存在分歧:
+
+```typescript
+class Base {
+  protected x: number = 1;
+}
+class Derived1 extends Base {
+  protected x: number = 5;
+}
+class Derived2 extends Base {
+  f1(other: Derived2) {
+    other.x = 10;
+  }
+  f2(other: Base) {
+    other.x = 10;
+/Property 'x' is protected and only accessible through an instance of class 'Derived2'. This is an instance of class 'Base'.
+  }
+}
+```
+
+例如，Java 认为这是合法的。另一方面，c # 和 c + + 选择这段代码应该是非法的。
+
+在这里输入 c # 和 c + + ，因为访问 Derived2中的 x 只能从 Derived2的子类中合法访问，Derived1不是其中之一。此外，如果通过 Derived2引用访问 x 是非法的(当然应该是非法的!)，然后通过基类引用访问它不应该改善这种情况。
+
+参见为什么我不能从派生类访问受保护的成员? 这解释了更多的 c # 的推理。
+
+#### `private`
+
+Private 类似于 protected，但是不允许来自(即使)子类的成员访问:
+
+```typescript
+class Base {
+  private x = 0;
+}
+const b = new Base();
+// Can't access from outside the class
+console.log(b.x);
+/Property 'x' is private and only accessible within class 'Base'.
+```
+
+```typescript
+class Derived extends Base {
+  showX() {
+    // Can't access in subclasses
+    console.log(this.x);
+/Property 'x' is private and only accessible within class 'Base'.
+  }
+}
+```
+
+因为私有成员对于派生类是不可见的，派生类不能增加它的可见性:
+
+```typescript
+class Base {
+  private x = 0;
+}
+class Derived extends Base {
+/Class 'Derived' incorrectly extends base class 'Base'.Property 'x' is private in type 'Base' but not in type 'Derived'.
+  x = 1;
+}
+```
+
+##### 跨实例访问`private` 
+
+不同的 OOP 语言对同一类的不同实例是否可以访问彼此的私有成员存在分歧。尽管 Java、 c # 、 c + + 、 Swift 和 PHP 等语言允许这样做，但 Ruby 不允许。
+
+TypeScript 允许跨实例的私有访问:
+
+```typescript
+class A {
+  private x = 10;
+
+  public sameAs(other: A) {
+    // No error
+    return other.x === this.x;
+  }
+}
+```
+
+#### 注意事项
+
+和 TypeScript 类型系统的其他方面一样，private 和 protected 只在类型检查期间强制执行。这意味着 JavaScript 运行时构造，比如 in 或者简单的属性查找，仍然可以访问一个私有或受保护的成员:
+
+```typescript
+class MySafe {
+  private secretKey = 12345;
+}
+```
+
+```js
+// In a JavaScript file...
+const s = new MySafe();
+// Will print 12345
+console.log(s.secretKey);
+```
+
+如果需要保护类中的值不受恶意操作者的侵害，应该使用提供硬运行时隐私的机制，如闭包、弱映射或私有字段。
+
+###  静态成员
+
+类可以有静态成员。这些成员不与类的特定实例关联。它们可以通过类构造器对象本身访问:
+
+```typescript
+class MyClass {
+  static x = 0;
+  static printX() {
+    console.log(MyClass.x);
+  }
+}
+console.log(MyClass.x);
+MyClass.printX();
+```
+
+静态成员还可以使用相同的 public、 protected 和 private 可见性修饰符:
+
+```typescript
+class MyClass {
+  private static x = 0;
+}
+console.log(MyClass.x);
+/Property 'x' is private and only accessible within class 'MyClass'.
+```
+
+静态成员也可以继承:
+
+```typescript
+class Base {
+  static getGreeting() {
+    return "Hello world";
+  }
+}
+class Derived extends Base {
+  myGreeting = Derived.getGreeting();
+}
+```
+
+#### 特殊静态名称
+
+从函数原型中覆盖属性通常是不安全的/不可能的。因为类本身是可以用new调用的函数，所以某些静态名称不能使用。函数属性，如 `name`, `length`, 和`call` ，无法定义为静态成员:
+
+```typescript
+class S {
+  static name = "S!";
+/Static property 'name' conflicts with built-in property 'Function.name' of constructor function 'S'.
+}
+```
+
+#### 为什么没有静态类？
+
+TypeScript（和 JavaScript） 不像 c # 和 Java 那样有一个称为静态类的构造。
+
+这些结构之所以存在，是因为这些语言强制所有数据和函数都在一个类中; 因为在ts中不存在这种限制，所以不需要它们。只有一个实例的类通常只在 JavaScript/TypeScript 中表示为普通对象。
+
+例如，我们不需要ts中的“静态类”语法，因为一个常规对象(甚至是顶级函数)也可以很好地完成这项工作:
+
+```typescript
+// Unnecessary "static" class
+class MyStaticClass {
+  static doSomething() {}
+}
+
+// Preferred (alternative 1)
+function doSomething() {}
+
+// Preferred (alternative 2)
+const MyHelperObject = {
+  dosomething() {},
+};
+```
+
+### 泛型类
+
+类，就像接口一样，可以是泛型的。当一个泛型类用 new 实例化时，其类型参数的推断方式与函数调用相同:
+
+```typescript
+class Box<Type> {
+  contents: Type;
+  constructor(value: Type) {
+    this.contents = value;
+  }
+}
+
+const b = new Box("hello!");
+     //const b: Box<string>
+```
+
+类可以像使用接口一样使用泛型约束和默认值。
+
+####  静态成员中的Type参数
+
+这个代码不合法，原因也不明显:
+
+```typescript
+class Box<Type> {
+  static defaultValue: Type;
+/Static members cannot reference class type parameters.
+}
+```
+
+请记住，类型总是被完全擦除！在运行时，只有一个 `Box.defaultValue` 属性插槽。这意味着设置 `Box<string>.defaultValue` (如果可能的话)也会改变 `Box<number>.default`-不好。泛型类的静态成员永远不能引用类的类型参数。
+
+### 在类运行时中的`this`
+
+重要的是要记住，TypeScript 不会改变 JavaScript 的运行时行为，而且 JavaScript 在某种程度上以具有一些特殊的运行时行为而闻名。
+
+JavaScript的处理方式确实不同寻常:
+
+```typescript
+class MyClass {
+  name = "MyClass";
+  getName() {
+    return this.name;
+  }
+}
+const c = new MyClass();
+const obj = {
+  name: "obj",
+  getName: c.getName,
+};
+
+// Prints "obj", not "MyClass"
+console.log(obj.getName());
+```
+
+长话短说，默认情况下，在函数内部的`this`的值取决于函数的调用方式。在这个例子中，因为函数是通过 obj 引用调用的，所以它的值是 obj 而不是类实例。
+
+这很少是你想要发生的! ts提供了一些方法来减轻或防止这种错误。
+
+#### 箭头函数
+
+如果你有一个函数被调用的方式会失去它的`this`上下文，那么使用箭头函数属性来代替方法定义是有意义的:
+
+```typescript
+class MyClass {
+  name = "MyClass";
+  getName = () => {
+    return this.name;
+  };
+}
+const c = new MyClass();
+const g = c.getName;
+// Prints "MyClass" instead of crashing
+console.log(g());
+```
+
+这有一些取舍:
+
+- `this`值在运行时保证是正确的，即使对于没有用ts检查的代码也是如此
+- 这将使用更多的内存，因为每个类实例都有以这种方式定义的每个函数的自己的副本
+- 你不能在派生类中使用`super.getName`，因为原型链中没有从中获取基类方法的条目
+
+#### `this`参数
+
+在方法或函数定义中，名为 this 的初始参数在打字稿中具有特殊意义。这些参数在编译过程中被删除:
+
+```typescript
+// TypeScript input with 'this' parameter
+function fn(this: SomeType, x: number) {
+  /* ... */
+}
+```
+
+```js
+// JavaScript output
+function fn(x) {
+  /* ... */
+}
+```
+
+ts检查使用 this 参数调用函数是否使用了正确的上下文。与使用箭头函数不同，我们可以在方法定义中添加 this 参数来静态地强制方法被正确调用:
+
+```typescript
+class MyClass {
+  name = "MyClass";
+  getName(this: MyClass) {
+    return this.name;
+  }
+}
+const c = new MyClass();
+// OK
+c.getName();
+
+// Error, would crash
+const g = c.getName;
+console.log(g());
+/The 'this' context of type 'void' is not assignable to method's 'this' of type 'MyClass'.
+```
+
+这个方法采用了与箭头函数相反的折衷方法:
+
+- JavaScript 调用方可能仍然不正确地使用类方法而没有实现它
+- 每个类定义只分配一个函数，而不是每个类实例分配一个函数
+- 基类方法定义仍然可以通过`super.`调用
+
+#### `this`类型
+
+在类中，一个名为 this 的特殊类型动态地引用当前类的类型。让我们看看这有什么用:
+
+```typescript
+class Box {
+  contents: string = "";
+  set(value: string) {
+  //(method) Box.set(value: string): this
+    this.contents = value;
+    return this;
+  }
+}
+```
+
+在这里，TypeScript 推断`set`的返回类型为 `this`，而不是 `Box`。现在让我们为 `Box` 创建一个子类:
+
+```typescript
+class ClearableBox extends Box {
+  clear() {
+    this.contents = "";
+  }
+}
+
+const a = new ClearableBox();
+const b = a.set("hello");
+     //const b: ClearableBox
+```
+
+你也可以在参数类型注释中使用`this`:
+
+```typescript
+class Box {
+  content: string = "";
+  sameAs(other: this) {
+    return other.content === this.content;
+  }
+}
+```
+
+这不同于编写 other: Box ー如果你有一个派生类，它的 sameAs 方法现在只接受同一个派生类的其他实例:
+
+```typescript
+class Box {
+  content: string = "";
+  sameAs(other: this) {
+    return other.content === this.content;
+  }
+}
+
+class DerivedBox extends Box {
+  otherContent: string = "?";
+}
+
+const base = new Box();
+const derived = new DerivedBox();
+derived.sameAs(base);
+/Argument of type 'Box' is not assignable to parameter of type 'DerivedBox'. Property 'otherContent' is missing in type 'Box' but required in type 'DerivedBox'.
+```
+
+#### `this`-基于类型的保护
+
+您可以在类和接口中的方法的返回位置中使用`this is Type`,当与类型收缩(例如 `if` 语句)混合时，目标对象的类型将收缩到指定的 `Type`。
+
+```typescript
+class FileSystemObject {
+  isFile(): this is FileRep {
+    return this instanceof FileRep;
+  }
+  isDirectory(): this is Directory {
+    return this instanceof Directory;
+  }
+  isNetworked(): this is Networked & this {
+    return this.networked;
+  }
+  constructor(public path: string, private networked: boolean) {}
+}
+
+class FileRep extends FileSystemObject {
+  constructor(path: string, public content: string) {
+    super(path, false);
+  }
+}
+
+class Directory extends FileSystemObject {
+  children: FileSystemObject[];
+}
+
+interface Networked {
+  host: string;
+}
+
+const fso: FileSystemObject = new FileRep("foo/bar.txt", "foo");
+
+if (fso.isFile()) {
+  fso.content;
+  
+const fso: FileRep
+} else if (fso.isDirectory()) {
+  fso.children;
+  
+const fso: Directory
+} else if (fso.isNetworked()) {
+  fso.host;
+  
+const fso: Networked & FileSystemObject
+}
+```
+
+此类型保护的一个常见用例是允许对特定字段进行延迟验证。例如，当 hasValue 被验证为真时，这个例子从框中保存的值中移除了一个未定义的值:
+
+```typescript
+class Box<T> {
+  value?: T;
+
+  hasValue(): this is { value: T } {
+    return this.value !== undefined;
+  }
+}
+
+const box = new Box();
+box.value = "Gameboy";
+
+box.value;
+     
+(property) Box<unknown>.value?: unknown
+
+if (box.hasValue()) {
+  box.value;
+       
+(property) value: unknown
+}
+```
+
+### 参数属性
+
+ts提供了特殊的语法，可以将构造函数参数转换为具有相同名称和值的类属性。这些属性称为参数属性，通过在构造函数参数前加上一个可见性修饰符 public、 private、 protected 或 readonly 来创建。结果字段得到这些修饰符:
+
+```typescript
+class Params {
+  constructor(
+    public readonly x: number,
+    protected y: number,
+    private z: number
+  ) {
+    // No body necessary
+  }
+}
+const a = new Params(1, 2, 3);
+console.log(a.x);
+             //(property) Params.x: number
+console.log(a.z);
+/Property 'z' is private and only accessible within class 'Params'.
+```
+
+### 类表达式
+
+类表达式与类声明非常相似。唯一真正的区别是类表达式不需要名称，尽管我们可以通过它们最终绑定到的任何标识符引用它们:
+
+```typescript
+const someClass = class<Type> {
+  content: Type;
+  constructor(value: Type) {
+    this.content = value;
+  }
+};
+
+const m = new someClass("Hello, world");
+     //const m: someClass<string>
+```
+
+### `abstract`类及成员
+
+ts中的类、方法和字段可能是抽象的。
+
+抽象方法或抽象字段是没有提供实现的方法。这些成员必须存在于抽象类中，而抽象类不能直接实例化。
+
+抽象类的作用是作为实现所有抽象成员的子类的基类。当一个类没有任何抽象成员时，它被称为具体的。
+
+让我们来看一个例子
+
+```typescript
+abstract class Base {
+  abstract getName(): string;
+
+  printName() {
+    console.log("Hello, " + this.getName());
+  }
+}
+
+const b = new Base();
+/Cannot create an instance of an abstract class.
+```
+
+我们不能用 new 实例化 Base，因为它是抽象的。相反，我们需要创建一个派生类并实现抽象成员:
+
+```typescript
+class Derived extends Base {
+  getName() {
+    return "world";
+  }
+}
+
+const d = new Derived();
+d.printName();
+```
+
+注意，如果我们忘记实现基类的抽象成员，我们会得到一个错误:
+
+```typescript
+class Derived extends Base {
+/Non-abstract class 'Derived' does not implement inherited abstract member 'getName' from class 'Base'.
+  // forgot to do anything
+}
+```
+
+### Abstract Construct Signatures抽象构造签名
+
+有时，您希望接受某个类构造函数，该函数生成从某个抽象类派生的类的实例。
+
+例如，你可能需要编写下面的代码:
+
+```typescript
+function greet(ctor: typeof Base) {
+  const instance = new ctor();
+/Cannot create an instance of an abstract class.
+  instance.printName();
+}
+```
+
+ts正确地告诉您您正在尝试实例化一个抽象类。毕竟，根据 greet 的定义，编写这样的代码是完全合法的，最终会构建一个抽象类:
+
+```typescript
+// Bad!
+greet(Base);
+```
+
+相反，你需要写一个函数来接受带有构造签名的东西:
+
+```typescript
+function greet(ctor: new () => Base) {
+  const instance = new ctor();
+  instance.printName();
+}
+greet(Derived);
+greet(Base);
+/Argument of type 'typeof Base' is not assignable to parameter of type 'new () => Base'. Cannot assign an abstract constructor type to a non-abstract constructor type.
+```
+
+现在，TypeScript 正确地告诉您可以调用哪个类构造函数—— Derived 可以，因为它是具体的，但 Base 不能。
+
+### 类之间的关系
+
+在大多数情况下，TypeScript 中的类在结构上进行比较，与其他类型相同。
+
+例如，这两个类可以互相替换使用，因为它们是相同的:
+
+```typescript
+class Point1 {
+  x = 0;
+  y = 0;
+}
+
+class Point2 {
+  x = 0;
+  y = 0;
+}
+
+// OK
+const p: Point1 = new Point2();
+```
+
+类似地，即使没有明确的继承，类之间也存在子类型关系:
+
+```typescript
+class Person {
+  name: string;
+  age: number;
+}
+
+class Employee {
+  name: string;
+  age: number;
+  salary: number;
+}
+
+// OK
+const p: Person = new Employee();
+```
+
+这听起来很简单，但也有一些案例看起来比其他案例更奇怪。
+
+空类没有成员。在结构类型系统中，没有成员的类型通常是其他任何类型的超类型。因此，如果您编写了一个空类(不要!)任何东西都可以代替它:
+
+```typescript
+class Empty {}
+
+function fn(x: Empty) {
+  // can't do anything with 'x', so I won't
+}
+
+// All OK!
+fn(window);
+fn({});
+fn(fn);
+```
+
+## 9、模块
+
+JavaScript 在处理模块化代码方面有着悠久的历史。自2012年开始，TypeScript 已经实现了对许多这些格式的支持，但是随着时间的推移，社区和 JavaScript 规范已经集中在一种称为 ES 模块(或 ES6模块)的格式上。您可能知道它的导入/导出语法。
+
+模块在2015年被添加到 JavaScript 规范中，到2020年已经在大多数 web 浏览器和 JavaScript 运行时中得到广泛支持。
+
+手册将包括 ES模块和前期流行的CommonJS`module.exports =` 语法 两个模块，并且你可以在模块的参考部分找到其他模块模式的相关信息。
+
+### 如何定义 JavaScript 模块
+
+在 TypeScript 中，就像在 ECMAScript 2015中一样，任何包含顶级导入或导出的文件都被视为模块。
+
+相反，没有任何顶级导入或导出声明的文件被视为其内容在全局范围内可用的脚本(因此对模块也是如此)。
+
+模块在它们自己的范围内执行，而不是在全局范围内。这意味着在模块中声明的变量、函数、类等在模块之外不可见，除非使用某种导出形式显式导出它们。相反，要使用从不同模块导出的变量、函数、类、接口等，必须使用导入形式之一导入该变量。
+
+### 非模块
+
+在我们开始之前，重要的是要了解ts认为模块是什么。JavaScript 规范声明，任何没有`export`或顶级`await`的 JavaScript 文件都应该被视为脚本，而不是模块。
+
+在脚本文件中，变量和类型被声明为在共享的全局范围内，并且假设您要么使用 -- outFile 编译器选项将多个输入文件连接到一个输出文件中，要么使用 HTML 中的多个 < script > 标记来加载这些文件(以正确的顺序!).
+
+如果你有一个当前没有任何导入或导出的文件，但是你想要被当作一个模块来处理，添加下面这行代码:
+
+```typescript
+export {};
+```
+
+不管你的模块目标是什么，这个语法都可以正常工作。
+
+### ts中的模块
+
+在用ts编写基于模块的代码时，需要考虑三个主要问题:
+
+- **Syntax**语法: 我想使用什么语法来导入和导出东西？
+- **Module Resolution**模块解析: 模块名称(或路径)和磁盘上的文件之间有什么关系？
+- **Module Output Target**模块输出目标: 我发射的 JavaScript 模块应该是什么样的？
+
+### ES 模块语法
+
+一个文件可以通过`export default`声明一个主导出:
+
+```typescript
+// @filename: hello.ts
+export default function helloWorld() {
+  console.log("Hello, world!");
+}
+```
+
+然后通过以下方式导入:
+
+```typescript
+import hello from "./hello.js";
+hello();
+```
+
+除了默认导出之外，通过省略默认导出，还可以导出多个变量和函数:
+
+```typescript
+// @filename: maths.ts
+export var pi = 3.14;
+export let squareTwo = 1.41;
+export const phi = 1.61;
+
+export class RandomNumberGenerator {}
+
+export function absolute(num: number) {
+  if (num < 0) return num * -1;
+  return num;
+}
+```
+
+这些可以通过导入语法在另一个文件中使用:
+
+```typescript
+import { pi, phi, absolute } from "./maths.js";
+
+console.log(pi);
+const absPhi = absolute(phi);
+        //const absPhi: number
+```
+
+###  额外导入语法
+
+导入可以使用像 `import { old as new }`这样的格式重命名:
+
+```typescript
+import { pi as π } from "./maths.js";
+
+console.log(π);
+           /*(alias) var π: number
+			import π*/
+```
+
+您可以将上面的语法混合并匹配为一个导入:
+
+```typescript
+// @filename: maths.ts
+export const pi = 3.14;
+export default class RandomNumberGenerator {}
+
+// @filename: app.ts
+import RNGen, { pi as π } from "./maths.js";
+
+RNGen;
+ /*(alias) class RNGen
+	import RNGen*/
+
+console.log(π);
+           /*(alias) const π: 3.14
+			import π*/
+```
+
+你可以将所有导出的对象放到一个名称空间中，使用 `* as name`:
+
+```typescript
+// @filename: app.ts
+import * as math from "./maths.js";
+
+console.log(math.pi);
+const positivePhi = math.absolute(math.phi);
+          //const positivePhi: number
+```
+
+你可以导入一个文件，而不是通过`import "./file"`将任何变量包含到你的当前模块中:
+
+```typescript
+// @filename: app.ts
+import "./maths.js";
+
+console.log("3.14");
+```
+
+在这种情况下，`import`什么也不做。但是，`maths.ts` 中的所有代码都会被计算，这可能会触发影响其他对象的副作用。
+
+####  特定于TypeScript的 ES 模块语法
+
+类型可以导出和导入，使用与 JavaScript 值相同的语法:
+
+```typescript
+// @filename: animal.ts
+export type Cat = { breed: string; yearOfBirth: number };
+
+export interface Dog {
+  breeds: string[];
+  yearOfBirth: number;
+}
+
+// @filename: app.ts
+import { Cat, Dog } from "./animal.js";
+type Animals = Cat | Dog;
+```
+
+ts用`import type`扩展了导入语法，那是一种只能导入类型的导入。
+
+```typescript
+// @filename: animal.ts
+export type Cat = { breed: string; yearOfBirth: number };
+'createCatName' cannot be used as a value because it was imported using 'import type'.
+export type Dog = { breeds: string[]; yearOfBirth: number };
+export const createCatName = () => "fluffy";
+
+// @filename: valid.ts
+import type { Cat, Dog } from "./animal.js";
+export type Animals = Cat | Dog;
+
+// @filename: app.ts
+import type { createCatName } from "./animal.js";
+const name = createCatName();
+```
+
+这种语法允许非ts编译器(如 Babel、 swc 或 esbuild)知道可以安全地删除哪些导入。
+
+#### 具有 CommonJS 行为的 ES 模块语法
+
+TypeScript具有直接与 CommonJS 和 AMD 需求相关的 ES Module 语法。在大多数情况下，使用 ES Module 的导入与这些环境的要求是一样的，但是这种语法确保了你的 TypeScript 文件与 CommonJS 输出有1比1的匹配:
+
+```typescript
+import fs = require("fs");
+const code = fs.readFileSync("hello.ts", "utf8");
+```
+
+您可以在模块参考页面中了解更多关于此语法的信息。
+
+### CommonJS 语法
+
+CommonJS是 npm 上大多数模块交付的格式。即使您正在使用上面提到的 ES Modules 语法编写代码，对 CommonJS 语法如何工作有一个简单的了解也会帮助您更容易地进行调试。
+
+#### Exporting 出口
+
+标识符通过在被叫做module的全局上设置exports属性被导出。
+
+```typescript
+function absolute(num: number) {
+  if (num < 0) return num * -1;
+  return num;
+}
+
+module.exports = {
+  pi: 3.14,
+  squareTwo: 1.41,
+  phi: 1.61,
+  absolute,
+};
+```
+
+然后这些文件可以通过一个 `require` 语句导入:
+
+```typescript
+const maths = require("maths");
+maths.pi;
+      //any
+```
+
+或者你可以使用 JavaScript 中的析构特性简化一下:
+
+```typescript
+const { squareTwo } = require("maths");
+squareTwo;
+   //const squareTwo: any
+```
+
+#### CommonJS和 ES 模块互操作
+
+在 CommonJS 和 ES Module 之间有一个不匹配的特性，因为 ES Module 只支持将默认导出作为一个对象，而不支持作为一个函数。TypeScript 有一个编译器标志，以减少 esModuleInterop 中两组不同约束之间的摩擦。
+
+### TypeScript的模块解析选项
+
+模块解析是从 import 或 require 语句获取字符串并确定该字符串指向哪个文件的过程。
+
+TypeScript包括两种解析策略：经典和节点。经典，当编译器标识module不是commonjs时的默认值，包含了向后兼容性。节点策略复制了Node.js在CommonJS模式下的工作方式，并附加了对.ts和.d.ts文件的检查。
+
+有许多 TSConfig 标志影响ts中的模块策略: moduleResolution、 baseUrl、 paths、 rootDirs。
+
+有关这些策略如何工作的详细信息，您可以参考模块解析。
+
+### TypeScript的模块输出选项
+
+有两个选项会影响发出的 JavaScript 输出:
+
+- [`target`](https://www.typescriptlang.org/tsconfig/#target)  它决定了哪些 JS 特性被降级(转换为在旧的 JavaScript 运行时中运行) ，哪些保持不变
+- [`module`](https://www.typescriptlang.org/tsconfig/#module) 这决定了模块之间相互交互的代码
+
+您所使用的目标是由您希望在其中运行ts代码的 JavaScript 运行时中可用的特性决定的。这可能是: 你支持的最古老的浏览器，你期望运行的最低版本的 Node.js，或者来自你运行时类似 Electron 的独特约束。
+
+所有模块之间的通信都是通过模块加载器进行的，编译器标志module决定使用哪个模块。在运行时，模块加载程序负责在执行模块之前查找并执行模块的所有依赖项。
+
+例如，下面是一个使用 ES Modules 语法的ts文件，展示了几个不同的模块选项:
+
+```typescript
+import { valueOfPi } from "./constants.js";
+
+export const twoPi = valueOfPi * 2;
+```
+
+#### `ES2020`
+
+```typescript
+import { valueOfPi } from "./constants.js";
+export const twoPi = valueOfPi * 2;
+```
+
+#### `CommonJS`
+
+```typescript
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.twoPi = void 0;
+const constants_js_1 = require("./constants.js");
+exports.twoPi = constants_js_1.valueOfPi * 2;
+```
+
+#### `UMD`
+
+```typescript
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
+    }
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./constants.js"], factory);
+    }
+})(function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.twoPi = void 0;
+    const constants_js_1 = require("./constants.js");
+    exports.twoPi = constants_js_1.valueOfPi * 2;
+});
+```
+
+> 注意，ES2020实际上与原始 index.ts 相同。
+
+在 TSConfig Reference for module 中，您可以看到所有可用的选项及其发出的 JavaScript 代码的样子。
+
+### TypeScript namespaces命名空间
+
+ts有自己的名称空间模块格式，它比 ES 模块标准早得多。这种语法对于创建复杂的定义文件有很多有用的特性，并且仍然可以在 DefinitelyTyped 中使用。名称空间中的大多数特性都存在于 ES Modules 中，虽然这并不是不推荐使用，但我们建议您使用这些特性来与 JavaScript 的方向保持一致。您可以在名称空间参考页中了解更多关于名称空间的信息。
+
+# 参考
+
+## 实用类型
+
+TypeScript 提供了几种实用程序类型来促进常见的类型转换。这些类型全局可用。
+
+### `Partial<Type>`
+
+构造一个类型，其所有 Type 属性都设置为可选。此实用程序将返回表示给定类型的所有子集的类型。
+
+##### Example 例子
+
+```typescript
+interface Todo {
+  title: string;
+  description: string;
+}
+
+function updateTodo(todo: Todo, fieldsToUpdate: Partial<Todo>) {
+  return { ...todo, ...fieldsToUpdate };
+}
+
+const todo1 = {
+  title: "organize desk",
+  description: "clear clutter",
+};
+
+const todo2 = updateTodo(todo1, {
+  description: "throw out trash",
+});
+```
+
+### `Required<Type>`
+
+构造一个包含 Type 设置为 required 的所有属性的类型。与 Partial 相反。
+
+##### Example 例子
+
+```typescript
+interface Props {
+  a?: number;
+  b?: string;
+}
+
+const obj: Props = { a: 5 };
+
+const obj2: Required<Props> = { a: 5 };
+/Property 'b' is missing in type '{ a: number; }' but required in type 'Required<Props>'.
+```
+
+### `Readonly<Type>`
+
+构造具有 Type 的所有属性设置为只读的类型，这意味着不能重新分配构造类型的属性。
+
+##### Example 例子
+
+```typescript
+interface Todo {
+  title: string;
+}
+
+const todo: Readonly<Todo> = {
+  title: "Delete inactive users",
+};
+
+todo.title = "Hello";
+/Cannot assign to 'title' because it is a read-only property.
+```
+
+这个实用程序对于表示在运行时失败的赋值表达式(即试图重新分配冻结对象的属性时)很有用。
+
+##### Object.freeze
+
+```typescript
+function freeze<Type>(obj: Type): Readonly<Type>;
+```
+
+### `Record<Keys,Type>`
+
+构造属性键为 Keys、属性值为 Type 的对象类型。此实用工具可用于将类型的属性映射到另一个类型。
+
+##### Example 例子
+
+```typescript
+interface CatInfo {
+  age: number;
+  breed: string;
+}
+
+type CatName = "miffy" | "boris" | "mordred";
+
+const cats: Record<CatName, CatInfo> = {
+  miffy: { age: 10, breed: "Persian" },
+  boris: { age: 5, breed: "Maine Coon" },
+  mordred: { age: 16, breed: "British Shorthair" },
+};
+
+cats.boris;
+ //const cats: Record<CatName, CatInfo>
+```
+
+### `Pick<Type, Keys>`
+
+通过从 Type 中选择一组属性 Keys (字符串文字或字符串文字的并集)来构造类型。
+
+##### Example 例子
+
+```typescript
+interface Todo {
+  title: string;
+  description: string;
+  completed: boolean;
+}
+
+type TodoPreview = Pick<Todo, "title" | "completed">;
+
+const todo: TodoPreview = {
+  title: "Clean room",
+  completed: false,
+};
+
+todo;
+ //const todo: TodoPreview
+```
+
+### `Omit<Type, Keys`>
+
+通过从 Type 中选取所有属性，然后移除 Keys (字符串文字或字符串文字的并集)来构造类型。
+
+##### Example 例子
+
+```typescript
+interface Todo {
+  title: string;
+  description: string;
+  completed: boolean;
+  createdAt: number;
+}
+
+type TodoPreview = Omit<Todo, "description">;
+
+const todo: TodoPreview = {
+  title: "Clean room",
+  completed: false,
+  createdAt: 1615544252770,
+};
+
+todo;
+ //const todo: TodoPreview
+
+type TodoInfo = Omit<Todo, "completed" | "createdAt">;
+
+const todoInfo: TodoInfo = {
+  title: "Pick up kids",
+  description: "Kindergarten closes at 5pm",
+};
+
+todoInfo;
+   //const todoInfo: TodoInfo
+```
+
+### `Exclude<Type, ExcludedUnion>`
+
+通过从类型中排除可分配给 ExcludedUnion 的所有联合成员来构造类型。
+
+##### Example 例子
+
+```typescript
+type T0 = Exclude<"a" | "b" | "c", "a">;
+     //type T0 = "b" | "c"
+type T1 = Exclude<"a" | "b" | "c", "a" | "b">;
+     //type T1 = "c"
+type T2 = Exclude<string | number | (() => void), Function>;
+     //type T2 = string | number
+```
+
+### `Extract<Type, Union>`
+
+通过从 Type 中提取可分配给 Union 的所有联合成员来构造类型。
+
+##### Example 例子
+
+```typescript
+type T0 = Extract<"a" | "b" | "c", "a" | "f">;
+     //type T0 = "a"
+type T1 = Extract<string | number | (() => void), Function>;
+     //type T1 = () => void
+```
+
+
+
+
 
