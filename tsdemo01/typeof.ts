@@ -1,9 +1,10 @@
-interface Person {
-  name: string;
-  age: number;
-  location: string;
+let pets = new Set(["Cat", "Dog", "Hamster"]);
+pets["species"] = "mammals";
+
+for (let pet in pets) {
+    console.log(pet); // "species"
 }
 
-type K1 = keyof Person; // "name" | "age" | "location"
-type K2 = keyof Person[];  // number | "length" | "push" | "concat" | ...
-type K3 = keyof { [x: string]: Person };  // string | number
+for (let pet of pets) {
+    console.log(pet); // "Cat", "Dog", "Hamster"
+}

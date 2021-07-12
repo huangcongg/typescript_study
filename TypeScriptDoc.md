@@ -5824,7 +5824,7 @@ const code = fs.readFileSync("hello.ts", "utf8");
 
 CommonJS是 npm 上大多数模块交付的格式。即使您正在使用上面提到的 ES Modules 语法编写代码，对 CommonJS 语法如何工作有一个简单的了解也会帮助您更容易地进行调试。
 
-#### Exporting 出口
+#### Exporting 导出
 
 标识符通过在被叫做module的全局上设置exports属性被导出。
 
@@ -5938,7 +5938,7 @@ ts有自己的名称空间模块格式，它比 ES 模块标准早得多。这�
 
 # 参考
 
-## 实用类型
+## 工具类型
 
 TypeScript 提供了几种实用程序类型来促进常见的类型转换。这些类型全局可用。
 
@@ -6125,7 +6125,4798 @@ type T1 = Extract<string | number | (() => void), Function>;
      //type T1 = () => void
 ```
 
+### `NonNullable<Type>`
+
+通过从 Type 中排除 null 和 undefined 来构造类型。
+
+##### Example 例子
+
+```typescript
+type T0 = NonNullable<string | number | undefined>;
+     
+type T0 = string | number
+type T1 = NonNullable<string[] | null | undefined>;
+     
+type T1 = string[]
+```
+
+### `Parameters<Type>`
+
+从函数类型Type的参数中使用的类型构造元组类型。
+
+##### Example 例子
+
+```typescript
+declare function f1(arg: { a: number; b: string }): void;
+
+type T0 = Parameters<() => string>;
+     //type T0 = []
+type T1 = Parameters<(s: string) => void>;
+     //type T1 = [s: string]
+type T2 = Parameters<<T>(arg: T) => T>;
+     //type T2 = [arg: unknown]
+type T3 = Parameters<typeof f1>;
+     /*type T3 = [arg: {
+        a: number;
+        b: string;
+    }]*/
+type T4 = Parameters<any>;
+     //type T4 = unknown[]
+type T5 = Parameters<never>;
+     //type T5 = never
+type T6 = Parameters<string>;
+/Type 'string' does not satisfy the constraint '(...args: any) => any'.
+     //type T6 = never
+type T7 = Parameters<Function>;
+/Type 'Function' does not satisfy the constraint '(...args: any) => any'.Type 'Function' provides no match for the signature '(...args: any): any'.
+     //type T7 = never
+```
+
+### `ConstructorParameters<Type>`
+
+从构造函数的参数的类型构造元组或数组类型。它生成具有所有参数类型的元组类型(如果 Type 不是函数，则生成 never 类型)。
+
+##### Example 例子
+
+```typescript
+type T0 = ConstructorParameters<ErrorConstructor>;
+     //type T0 = [message?: string]
+type T1 = ConstructorParameters<FunctionConstructor>;
+     //type T1 = string[]
+type T2 = ConstructorParameters<RegExpConstructor>;
+     //type T2 = [pattern: string | RegExp, flags?: string]
+type T3 = ConstructorParameters<any>;
+     //type T3 = unknown[]
+
+type T4 = ConstructorParameters<Function>;
+/Type 'Function' does not satisfy the constraint 'abstract new (...args: any) => any'.Type 'Function' provides no match for the signature 'new (...args: any): any'.
+     //type T4 = never
+
+//我自己添加的例子
+class Function1{
+  constructor(a:string,b:string){
+
+  }
+}
+type T5 = ConstructorParameters<typeof Function1>;
+```
+
+### `ReturnType<Type>`
+
+构造一个类型，包含函数 Type 的返回类型。
+
+##### Example 例子
+
+```typescript
+declare function f1(): { a: number; b: string };
+type T0 = ReturnType<() => string>;     
+	//type T0 = string
+type T1 = ReturnType<(s: string) => void>;     
+	//type T1 = void
+type T2 = ReturnType<<T>() => T>;     
+	//type T2 = unknown
+type T3 = ReturnType<<T extends U, U extends number[]>() => T>;     
+	//type T3 = number[]
+type T4 = ReturnType<typeof f1>;     
+    /*type T4 = {
+        a: number;
+        b: string;
+    }*/
+type T5 = ReturnType<any>;     
+     //type T5 = any
+type T6 = ReturnType<never>;     
+     //type T6 = never
+type T7 = ReturnType<string>;
+/Type 'string' does not satisfy the constraint '(...args: any) => any'.Type 'string' does not satisfy the constraint '(...args: any) => any'.     
+     //type T7 = any
+type T8 = ReturnType<Function>;
+/Type 'Function' does not satisfy the constraint '(...args: any) => any'.Type 'Function' provides no match for the signature '(...args: any): any'.
+     //type T8 = any
+```
+
+### `InstanceType<Type`>
+
+构造由 Type 中构造函数的实例类型组成的类型。
+
+##### Example 例子
+
+```typescript
+class C {
+  x = 0;
+  y = 0;
+}
+
+type T0 = InstanceType<typeof C>;
+     //type T0 = C
+type T1 = InstanceType<any>;
+     //type T1 = any
+type T2 = InstanceType<never>;
+     //type T2 = never
+type T3 = InstanceType<string>;
+/Type 'string' does not satisfy the constraint 'abstract new (...args: any) => any'.
+     //type T3 = any
+type T4 = InstanceType<Function>;
+/Type 'Function' does not satisfy the constraint 'abstract new (...args: any) => any'.Type 'Function' provides no match for the signature 'new (...args: any): any'.
+     //type T4 = any
+```
+
+### `ThisParameterType<Type>`
+
+提取函数类型的this参数的类型，如果函数类型没有this参数，则unknown。
+
+##### Example 例子
+
+```typescript
+function toHex(this: Number) {
+  return this.toString(16);
+}
+
+function numberToString(n: ThisParameterType<typeof toHex>) {
+  return toHex.apply(n);
+}
+```
+
+### `OmitThisParameter<Type>`
+
+从 Type 中移除this参数。如果 Type 没有显式声明this参数，则结果只是 Type。否则，将从 Type 创建没有this参数的新函数类型。泛型被擦除，只有最后一个重载签名被传播到新的函数类型中。
+
+##### Example 例子
+
+```typescript
+function toHex(this: Number) {
+  return this.toString(16);
+}
+
+const fiveToHex: OmitThisParameter<typeof toHex> = toHex.bind(5);
+
+console.log(fiveToHex());
+```
+
+### `ThisType<Type>`
+
+此实用程序不返回转换后的类型。相反，它可以作为this类型上下文的标记。注意 -- noImplicitThis 标志必须启用才能使用这个实用程序。
+
+##### Example 例子
+
+```typescript
+type ObjectDescriptor<D, M> = {
+  data?: D;
+  methods?: M & ThisType<D & M>; // Type of 'this' in methods is D & M
+};
+
+function makeObject<D, M>(desc: ObjectDescriptor<D, M>): D & M {
+  let data: object = desc.data || {};
+  let methods: object = desc.methods || {};
+  return { ...data, ...methods } as D & M;
+}
+
+let obj = makeObject({
+  data: { x: 0, y: 0 },
+  methods: {
+    moveBy(dx: number, dy: number) {
+      this.x += dx; // Strongly typed this
+      this.y += dy; // Strongly typed this
+    },
+  },
+});
+
+obj.x = 10;
+obj.y = 20;
+obj.moveBy(5, 5);
+```
+
+在上面的示例中，makeObject 参数中的methods对象具有上下文类型，包括 ThisType < D & M > ，因此methods对象中的方法中的this的类型是{ x: number，y: number } & { moveBy (dx: number，dy: number) : number }。请注意，methods属性的类型如何同时是方法中this类型的推断目标和源。
+
+ThisType < t > 标记接口只是在 lib.d.ts 中声明的一个空接口。除了在对象文本的上下文类型中被识别之外，接口的作用就像任何空接口一样。
+
+### 内部字符串操作类型
+
+#### `Uppercase<StringType>`
+
+#### `Lowercase<StringType>`
+
+#### `Capitalize<StringType>`
+
+#### `Uncapitalize<StringType>`
+
+为了帮助处理模板字符串的字符串操作，TypeScript 包含了一组类型，可以用于类型系统中的字符串操作。您可以在 Template Literal Types 文档中找到它们。
+
+## 装饰器
+
+### 引言
+
+随着 TypeScript 和 ES6中类的引入，现在存在一些需要额外特性来支持注释或修改类和类成员的场景。Decorator 提供了一种为类声明和成员同时添加注释和元编程语法的方法。是 JavaScript 的第二阶段提案，可以作为 TypeScript 的一个实验性特性。
+
+> 注意: 装饰器是一个实验性的特性，可能在将来的版本中改变。
+
+要启用对 decorator 的实验性支持，您必须在命令行或 tsconfig.json 中启用 experimentalDecorators 编译器选项:
+
+**Command Line**:
+
+```shell
+tsc --target ES5 --experimentalDecorators
+```
+
+**tsconfig.json**:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES5",
+    "experimentalDecorators": true
+  }
+}
+```
+
+### 装饰器
+
+装饰器是一种特殊类型的声明，可以附加到类声明、方法、访问器、属性或参数。装饰器使用形式：@expression，其中 expression 必须计算为一个函数，该函数将在运行时使用关于装饰声明的信息调用。
+
+例如，给定装饰器@sealed，我们可以将 sealed 函数写成:
+
+```typescript
+function sealed(target) {
+  // do something with 'target' ...
+}
+```
+
+### 装饰器工厂
+
+如果我们想要自定义如何将装饰符应用于声明，我们可以编写装饰符工厂。Decorator Factory 只是一个函数，它返回的表达式将在运行时由 Decorator 调用。
+
+我们可以用下面的方式编写一个装饰工厂:
+
+```typescript
+function color(value: string) {
+  // this is the decorator factory, it sets up
+  // the returned decorator function
+  return function (target) {
+    // this is the decorator
+    // do something with 'target' and 'value'...
+  };
+}
+```
+
+### 装饰器组合
+
+可以将多个 decorator 应用于一个声明，例如在单行上:
+
+```typescript
+@f @g x
+```
+
+多行:
+
+```typescript
+@f
+@g
+x
+```
+
+当多个 decorator 应用于单个声明时，它们的求值方式类似于数学中的复合函数。在这个模型中，当组合函数 f 和 g 时，得到的组合函数((*f* ∘ *g*)(x)等价于 f (g (x))。
+
+因此，当在一个 TypeScript 声明上计算多个 decorator 时，需要执行以下步骤:
+
+1. 由上至下依次对装饰器表达式求值。
+2. 然后，从下到上将结果作为函数调用
+
+如果我们使用 decorator 工厂，我们可以通过下面的例子来观察这个评估顺序:
+
+```typescript
+function first() {
+  console.log("first(): factory evaluated");
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    console.log("first(): called");
+  };
+}
+
+function second() {
+  console.log("second(): factory evaluated");
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    console.log("second(): called");
+  };
+}
+
+class ExampleClass {
+  @first()
+  @second()
+  method() {}
+}
+```
+
+它会将输出打印到控制台:
+
+```shell
+first(): factory evaluated
+second(): factory evaluated
+second(): called
+first(): called
+```
+
+### 装饰器求值
+
+如何将 decorator 应用于类内的各种声明有一个明确的顺序:
+
+1. *参数装饰器*，然后依次是*方法装饰器*，*访问符装饰器*，或*属性装饰器*应用到每个实例成员。
+2. *参数装饰器*，然后依次是*方法装饰器*，*访问符装饰器*，或*属性装饰器*应用到每个静态成员。
+3. *参数装饰器*应用到构造函数。
+4. *类装饰器*应用到类。
+
+### 类装饰器
+
+*类装饰器*在类声明之前被声明（紧靠着类声明）。 类装饰器应用于类构造函数，可以用来监视，修改或替换类定义。 类装饰器不能用在声明文件中( `.d.ts`)，也不能用在任何外部上下文中（比如`declare`的类）。
+
+类装饰器表达式会在运行时当作函数被调用，类的构造函数作为其唯一的参数。
+
+如果类装饰器返回一个值，它会使用提供的构造函数来替换类的声明。
+
+> 注意 如果你要返回一个新的构造函数，你必须注意处理好原来的原型链。 在运行时的装饰器调用逻辑中 *不会*为你做这些。
+
+下面是一个应用于 BugReport 类的类 decorator (@sealed)的例子:
+
+```typescript
+@sealed
+class BugReport {
+  type = "report";
+  title: string;
+
+  constructor(t: string) {
+    this.title = t;
+  }
+}
+```
+
+我们可以使用以下函数声明来定义@sealed decorator:
+
+```typescript
+function sealed(constructor: Function) {
+  Object.seal(constructor);
+  Object.seal(constructor.prototype);
+}
+```
+
+当@sealed 被执行时，它将同时密封构造函数和原型，这样就不会允许类在运行时被子类化。
+
+接下来我们有一个如何重写构造函数来设置新默认值的例子。
+
+```typescript
+function reportableClassDecorator<T extends { new (...args: any[]): {} }>(constructor: T) {
+  return class extends constructor {
+    reportingURL = "http://www...";
+  };
+}
+
+@reportableClassDecorator
+class BugReport {
+  type = "report";
+  title: string;
+
+  constructor(t: string) {
+    this.title = t;
+  }
+}
+
+const bug = new BugReport("Needs dark mode");
+console.log(bug.title); // Prints "Needs dark mode"
+console.log(bug.type); // Prints "report"
+
+// Note that the decorator _does not_ change the TypeScript type
+// and so the new property `reportingURL` is not known
+// to the type system:
+bug.reportingURL;
+/Property 'reportingURL' does not exist on type 'BugReport'.
+```
+
+### 方法装饰器
+
+方法修饰符就在方法声明之前声明。修饰符应用于方法的属性描述符，可用于观察、修改或替换方法定义。方法修饰符不能用于声明文件、重载或任何其他环境上下文(例如声明类)中。
+
+方法 decorator 的表达式在运行时将被作为一个函数调用，具有以下三个参数:
+
+1. 对于静态成员来说是类的**构造函数**，对于实例成员是类的**原型对象**。
+2. 成员的**名字**。
+3. 成员的属性**描述**符。
+
+> 注意: 如果脚本目标小于 ES5，属性描述符将不被定义。
+
+如果方法装饰器返回一个值，它将用作该方法的属性描述符。
+
+> 注意: 如果脚本目标小于 ES5，返回值将被忽略。
+
+下面是应用于 Greeter 类的方法装饰器 (@enumerable)的示例:
+
+```typescript
+class Greeter {
+  greeting: string;
+  constructor(message: string) {
+    this.greeting = message;
+  }
+
+  @enumerable(false)
+  greet() {
+    return "Hello, " + this.greeting;
+  }
+}
+```
+
+我们可以使用下面的函数声明来定义@enumerable 装饰器:
+
+```typescript
+function enumerable(value: boolean) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    descriptor.enumerable = value;
+  };
+}
+```
+
+这里的@enumerable (false) 装饰器是一个装饰器工厂。当调用@enumerable(false) 装饰器时，它修改属性描述符的enumerable属性。
+
+###  访问器装饰器
+
+在访问器声明之前声明访问器装饰器。访问器修饰符应用于访问器的属性描述符，可用于观察、修改或替换访问器的定义。无法在声明文件中或任何其他环境上下文(例如declare类)中使用访问器装饰器。
+
+```typescript
+注意: TypeScript 不允许对单个成员的 get 和 set 访问器进行装饰。相反，该成员的所有 decorator 必须应用于按文档顺序指定的第一个访问器。这是因为装饰符应用于属性描述符，该属性描述符将 get 和 set 访问器组合在一起，而不是将每个声明分开。
+```
+
+在运行时，accessor decorator 的表达式将被调用为一个函数，具有以下三个参数:
+
+1.  静态成员的类的构造函数，或者实例成员的类的原型
+2.  成员的名称
+3. 成员的属性描述
+
+> 注意: 如果脚本目标小于 ES5，属性描述将不被定义。
+
+如果访问器 decorator 返回一个值，它将用作成员的属性描述符。
+
+> 注意: 如果脚本目标小于 ES5，返回值将被忽略。
+
+下面是应用于 Point 类成员的 accessor decorator (@configable)的示例:
+
+```typescript
+class Point {
+  private _x: number;
+  private _y: number;
+  constructor(x: number, y: number) {
+    this._x = x;
+    this._y = y;
+  }
+
+  @configurable(false)
+  get x() {
+    return this._x;
+  }
+
+  @configurable(false)
+  get y() {
+    return this._y;
+  }
+}
+```
+
+我们可以使用以下函数声明来定义@configurable decorator:
+
+```typescript
+function configurable(value: boolean) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    descriptor.configurable = value;
+  };
+}
+```
+
+### 属性装饰器
+
+属性装饰符就在属性声明之前声明。不能在声明文件中或任何其他环境上下文(例如declare类)中使用属性装饰器。
+
+属性修饰符的表达式在运行时将被作为一个函数调用，具有以下两个参数:
+
+1. 静态成员的类的构造函数，或者实例成员的类的原型
+2. 成员的名称
+
+> 注意  *属性描述符*不会做为参数传入属性装饰器，这与TypeScript是如何初始化属性装饰器的有关。 因为目前没有办法在定义一个原型对象的成员时描述一个实例属性，并且没办法监视或修改一个属性的初始化方法。返回值也会被忽略。因此，属性描述符只能用来监视类中是否声明了某个名字的属性。
+
+我们可以用它来记录这个属性的元数据，如下例所示：
+
+```typescript
+class Greeter {
+  @format("Hello, %s")
+  greeting: string;
+  constructor(message: string) {
+    this.greeting = message;
+  }
+  greet() {
+    let formatString = getFormat(this, "greeting");
+    return formatString.replace("%s", this.greeting);
+  }
+}
+```
+
+然后定义`@format`装饰器和`getFormat`函数：
+
+```typescript
+import "reflect-metadata";
+const formatMetadataKey = Symbol("format");
+function format(formatString: string) {
+  return Reflect.metadata(formatMetadataKey, formatString);
+}
+function getFormat(target: any, propertyKey: string) {
+  return Reflect.getMetadata(formatMetadataKey, target, propertyKey);
+```
+
+这个`@format("Hello, %s")`装饰器是个 [装饰器工厂](https://www.tslang.cn/docs/handbook/decorators.html#decorator-factories)。 当 `@format("Hello, %s")`被调用时，它添加一条这个属性的元数据，通过`reflect-metadata`库里的`Reflect.metadata`函数。 当 `getFormat`被调用时，它读取格式的元数据。
+
+> 注意  这个例子需要使用`reflect-metadata`库。 查看 [元数据](https://www.tslang.cn/docs/handbook/decorators.html#metadata)了解`reflect-metadata`库更详细的信息。
+
+### 参数装饰器
+
+*参数装饰器*声明在一个参数声明之前（紧靠着参数声明）。 参数装饰器应用于类构造函数或方法声明。 参数装饰器不能用在声明文件（.d.ts），重载或其它外部上下文（比如 `declare`的类）里。
+
+参数装饰器表达式会在运行时当作函数被调用，传入下列3个参数：
+
+1. 对于静态成员来说是类的构造函数，对于实例成员是类的原型对象。
+2. 成员的名字。
+3. 参数在函数参数列表中的索引。
+
+> 注意  参数装饰器只能用来监视一个方法的参数是否被传入。
+
+参数装饰器的返回值会被忽略。
+
+下例定义了参数装饰器（`@required`）并应用于`BugReport`类方法的一个参数：
+
+```typescript
+class BugReport {
+  type = "report";
+  title: string;
+
+  constructor(t: string) {
+    this.title = t;
+  }
+
+  @validate
+  print(@required verbose: boolean) {
+    if (verbose) {
+      return `type: ${this.type}\ntitle: ${this.title}`;
+    } else {
+     return this.title; 
+    }
+  }
+}
+```
+
+然后，我们可以使用以下函数声明定义@required 和@validate 装饰器:
+
+```typescript
+import "reflect-metadata";
+const requiredMetadataKey = Symbol("required");
+
+function required(target: Object, propertyKey: string | symbol, parameterIndex: number) {
+  let existingRequiredParameters: number[] = Reflect.getOwnMetadata(requiredMetadataKey, target, propertyKey) || [];
+  existingRequiredParameters.push(parameterIndex);
+  Reflect.defineMetadata( requiredMetadataKey, existingRequiredParameters, target, propertyKey);
+}
+
+function validate(target: any, propertyName: string, descriptor: TypedPropertyDescriptor<Function>) {
+  let method = descriptor.value!;
+
+  descriptor.value = function () {
+    let requiredParameters: number[] = Reflect.getOwnMetadata(requiredMetadataKey, target, propertyName);
+    if (requiredParameters) {
+      for (let parameterIndex of requiredParameters) {
+        if (parameterIndex >= arguments.length || arguments[parameterIndex] === undefined) {
+          throw new Error("Missing required argument.");
+        }
+      }
+    }
+    return method.apply(this, arguments);
+  };
+}
+```
+
+@ required decorator 添加一个元数据条目，将参数标记为需要的。然后,@validate decorator 将现有的 greet 方法包装在一个函数中，该函数在调用原始方法之前验证参数。
+
+> 此示例需要 reflect-Metadata 库。有关 reflect-Metadata 库的详细信息，请参阅 Metadata。
+
+### 元数据
+
+一些示例使用了 reflect-metadata 库，该库为实验的元数据 API 添加了一个多边形填充。这个库还不是 ECMAScript (JavaScript)标准的一部分。然而，一旦 decorator 被正式采用为 ECMAScript 标准的一部分，这些扩展将被提议采用。
+
+您可以通过 npm 安装这个库:
+
+```shell
+npm i reflect-metadata --save
+```
+
+TypeScript 包含了对为包含 decorator 的声明发出特定类型元数据的实验支持。要启用这个实验支持，您必须在命令行或 tsconfig.json 中设置 emitDecoratorMetadata 编译器选项:
+
+```shell
+tsc --target ES5 --experimentalDecorators --emitDecoratorMetadata
+```
+
+**tsconfig.json**:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES5",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  }
+}
+```
+
+当启用后，只要`reflect-metadata`库被引入了，设计阶段添加的类型信息可以在运行时使用。
+
+我们可以在下面的例子中看到这一点:
+
+```typescript
+import "reflect-metadata";
+
+class Point {
+  constructor(public x: number, public y: number) {}
+}
+
+class Line {
+  private _start: Point;
+  private _end: Point;
+
+  @validate
+  set start(value: Point) {
+    this._start = value;
+  }
+
+  get start() {
+    return this._start;
+  }
+
+  @validate
+  set end(value: Point) {
+    this._end = value;
+  }
+
+  get end() {
+    return this._end;
+  }
+}
+
+function validate<T>(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) {
+  let set = descriptor.set!;
+  
+  descriptor.set = function (value: T) {
+    let type = Reflect.getMetadata("design:type", target, propertyKey);
+
+    if (!(value instanceof type)) {
+      throw new TypeError(`Invalid type, got ${typeof value} not ${type.name}.`);
+    }
+
+    set.call(this, value);
+  };
+}
+
+const line = new Line()
+line.start = new Point(0, 0)
+
+// @ts-ignore
+// line.end = {}
+
+// Fails at runtime with:
+// > Invalid type, got object not Point
+```
+
+TypeScript编译器可以通过`@Reflect.metadata`装饰器注入设计阶段的类型信息。 你可以认为它相当于下面的TypeScript：
+
+```typescript
+class Line {
+  private _start: Point;
+  private _end: Point;
+  @validate
+  @Reflect.metadata("design:type", Point)
+  set start(value: Point) {
+    this._start = value;
+  }
+  get start() {
+    return this._start;
+  }
+  @validate
+  @Reflect.metadata("design:type", Point)
+  set end(value: Point) {
+    this._end = value;
+  }
+  get end() {
+    return this._end;
+  }
+}
+```
+
+> 注释: 修饰符元数据是一个实验性的特性，可能会在未来的版本中引入突破性的变化。
+
+## 声明合并
+
+ts中的一些独特概念在类型级描述了 JavaScript 对象的形状。对于ts来说，一个特别独特的例子是“声明合并”的概念。理解这个概念将使您在使用现有的 JavaScript 时具有优势。它也为更高级的抽象概念打开了大门。
+
+就本文而言，“声明合并”意味着编译器将两个单独的声明合并为一个定义，声明的名称相同。这个合并定义具有两个原始声明的特征。任何数量的声明都可以合并; 它不仅限于两个声明。
+
+### 基本概念
+
+在 TypeScript 中，声明至少在三个组中的一个组中创建实体: 命名空间、类型或值。 创建命名空间的声明会新建一个命名空间，其中包含使用点符号访问的名称。类型创建声明就是这样做的: 它们创建一个类型，该类型使用声明的形状可见并绑定到给定的名称。最后，创建值声明创建的值在输出 JavaScript 中是可见的。
+
+| Declaration Type 声明类型 | Namespace 命名空间 | Type 类型 | Value 价值 |
+| :------------------------ | :----------------- | :-------- | :--------- |
+| Namespace 命名空间        | X                  |           | X          |
+| Class 类别                |                    | X         | X          |
+| Enum 女名女子名           |                    | X         | X          |
+| Interface 界面            |                    | X         |            |
+| Type Alias 输入 Alias     |                    | X         |            |
+| Function 功能             |                    |           | X          |
+| Variable 变量             |                    |           | X          |
+
+理解每个声明创建的内容将有助于您理解在执行声明合并时合并了什么内容。
+
+### 合并接口
+
+最简单也许是最常见的声明合并类型是接口合并。在最基本的层次上，merge 机械地将两个声明的成员连接到同名的单个接口中。
+
+```typescript
+interface Box {
+  height: number;
+  width: number;
+}
+interface Box {
+  scale: number;
+}
+let box: Box = { height: 5, width: 6, scale: 10 };
+```
+
+接口的非函数成员应该是唯一的。如果它们不是唯一的，那么它们必须是相同类型的。如果接口声明的非函数成员名称相同，但类型不同，则编译器将发出错误。
+
+对于函数成员，同名的每个函数成员都被视为描述同一函数的重载。同样值得注意的是，在接口 a 与后面的接口 a 合并的情况下，第二个接口的优先级将高于第一个接口。
+
+也就是说，在这个例子中:
+
+```typescript
+interface Cloner {
+  clone(animal: Animal): Animal;
+}
+interface Cloner {
+  clone(animal: Sheep): Sheep;
+}
+interface Cloner {
+  clone(animal: Dog): Dog;
+  clone(animal: Cat): Cat;
+}
+```
+
+这三个接口将合并为一个声明，如下所示:
+
+```typescript
+interface Cloner {
+  clone(animal: Dog): Dog;
+  clone(animal: Cat): Cat;
+  clone(animal: Sheep): Sheep;
+  clone(animal: Animal): Animal;
+}
+```
+
+请注意，每个组的元素保持相同的顺序，但组本身首先与后来的重载集合合并。
+
+这条规则的一个例外是特殊的签名。如果签名有一个参数，其类型是单个字符串文字类型(例如，不是字符串文字的联合) ，那么它将冒泡到合并重载列表的顶部。
+
+例如，下列接口将合并在一起:
+
+```typescript
+interface Document {
+  createElement(tagName: any): Element;
+}
+interface Document {
+  createElement(tagName: "div"): HTMLDivElement;
+  createElement(tagName: "span"): HTMLSpanElement;
+}
+interface Document {
+  createElement(tagName: string): HTMLElement;
+  createElement(tagName: "canvas"): HTMLCanvasElement;
+}
+```
+
+由此产生的合并Document声明如下:
+
+```typescript
+interface Document {
+  createElement(tagName: "canvas"): HTMLCanvasElement;
+  createElement(tagName: "div"): HTMLDivElement;
+  createElement(tagName: "span"): HTMLSpanElement;
+  createElement(tagName: string): HTMLElement;
+  createElement(tagName: any): Element;
+}
+```
+
+###  合并命名空间
+
+与接口类似，具有相同名称的命名空间也将合并其成员。由于命名空间同时创建一个命名空间和一个值，因此我们需要了解两者如何合并。
+
+为了合并命名空间，将合并每个命名空间中声明的导出接口的类型定义，形成一个单一的命名空间，其中包含合并的接口定义。
+
+为了合并命名空间值，在每个声明站点上，如果命名空间已经与给定的名称一起存在，则通过接受现有命名空间并将导出的第二个命名空间的成员添加到第一个命名空间来进一步扩展命名空间。
+
+在这个例子中，Animals的声明合并:
+
+```typescript
+namespace Animals {
+  export class Zebra {}
+}
+namespace Animals {
+  export interface Legged {
+    numberOfLegs: number;
+  }
+  export class Dog {}
+}
+```
+
+相当于:
+
+```typescript
+namespace Animals {
+  export interface Legged {
+    numberOfLegs: number;
+  }
+  export class Zebra {}
+  export class Dog {}
+}
+```
+
+这种名称空间合并模型是一个很有帮助的起点，但是我们还需要了解对于未导出的成员会发生什么。非导出成员仅在原始(未合并)命名空间中可见。这意味着在合并之后，来自其他声明的合并成员不能看到非导出成员。
+
+我们可以在这个例子中更清楚地看到这一点:
+
+```typescript
+namespace Animal {
+  let haveMuscles = true;
+  export function animalsHaveMuscles() {
+    return haveMuscles;
+  }
+}
+namespace Animal {
+  export function doAnimalsHaveMuscles() {
+    return haveMuscles; // Error, because haveMuscles is not accessible here
+  }
+}
+```
+
+因为 haveMuscles 不会被导出，所以只有共享相同未合并命名空间的 animalsHaveMuscles 函数才能看到该符号。doAnimalsHaveMuscles 函数，即使它是合并的 Animal 命名空间的一部分，也不能看到这个未导出的成员。
+
+### 将命名空间与类、函数和枚举合并
+
+命名空间具有足够的灵活性，可以与其他类型的声明合并。为此，命名空间声明必须遵循它将与之合并的声明。结果声明具有两种声明类型的属性。使用这种能力对 JavaScript 以及其他编程语言中的一些模式进行建模。
+
+### 将命名空间与类合并
+
+这让我们可以表示内部类。
+
+```typescript
+class Album {
+  label: Album.AlbumLabel;
+}
+namespace Album {
+  export class AlbumLabel {}
+}
+```
+
+合并成员的可见性规则与合并命名空间部分中描述的规则相同，因此我们必须导出 AlbumLabel 类以便合并后的类能够看到它。最终的结果是在另一个类中管理一个类。还可以使用命名空间向现有类添加更多的静态成员。
+
+除了内部类的模式之外，您可能还熟悉 JavaScript 的实践，即创建一个函数，然后通过在函数中添加属性来进一步扩展函数。ts使用声明合并以类型安全的方式构建类似的定义。
+
+```typescript
+function buildLabel(name: string): string {
+  return buildLabel.prefix + name + buildLabel.suffix;
+}
+namespace buildLabel {
+  export let suffix = "";
+  export let prefix = "Hello, ";
+}
+console.log(buildLabel("Sam Smith"));
+```
+
+类似地，命名空间可以用于使用静态成员扩展 enums:
+
+```typescript
+enum Color {
+  red = 1,
+  green = 2,
+  blue = 4,
+}
+namespace Color {
+  export function mixColor(colorName: string) {
+    if (colorName == "yellow") {
+      return Color.red + Color.green;
+    } else if (colorName == "white") {
+      return Color.red + Color.green + Color.blue;
+    } else if (colorName == "magenta") {
+      return Color.red + Color.blue;
+    } else if (colorName == "cyan") {
+      return Color.green + Color.blue;
+    }
+  }
+}
+```
+
+### 不允许的合并
+
+并不是所有的合并在ts中都被允许。目前，类不能与其他类或变量合并。有关模拟类合并的信息，请参阅ts部分中的 mixin。
+
+### 模块增强
+
+虽然 JavaScript 模块不支持合并，但是您可以通过导入和更新现有对象来修补它们。让我们来看一个玩具**observable**的例子:
+
+```typescript
+// observable.ts
+export class Observable<T> {
+  // ... implementation left as an exercise for the reader ...
+}
+// map.ts
+import { Observable } from "./observable";
+Observable.prototype.map = function (f) {
+  // ... another exercise for the reader
+};
+```
+
+这在ts中也可以很好地工作，但是编译器不知道 Observable.prototype.map。你可以使用模块增强来告诉编译器:
+
+```typescript
+// observable.ts
+export class Observable<T> {
+  // ... implementation left as an exercise for the reader ...
+}
+// map.ts
+import { Observable } from "./observable";
+declare module "./observable" {
+  interface Observable<T> {
+    map<U>(f: (x: T) => U): Observable<U>;
+  }
+}
+Observable.prototype.map = function (f) {
+  // ... another exercise for the reader
+};
+// consumer.ts
+import { Observable } from "./observable";
+import "./map";
+let o: Observable<number>;
+o.map((x) => x.toFixed());
+```
+
+模块名称的解析方式与导入/导出中的模块说明符相同。有关更多信息，请参见模块。然后合并扩展中的声明，就好像它们声明在与原始文件相同的文件中一样。
+
+然而，有两个限制要记住:
+
+1.  您不能在扩展中声明新的顶级声明——只能对现有声明进行补丁
+2. 默认导出也不能增强，只能命名导出(因为需要通过导出的名称增强导出，并且`default` 是一个保留字-看[#14080 # 14080](https://github.com/Microsoft/TypeScript/issues/14080) 了解详情)
+
+### 全局增强
+
+您还可以从模块内部向全局范围添加声明:
+
+```typescript
+// observable.ts
+export class Observable<T> {
+  // ... still no implementation ...
+}
+declare global {
+  interface Array<T> {
+    toObservable(): Observable<T>;
+  }
+}
+Array.prototype.toObservable = function () {
+  // ...
+};
+```
+
+全局增强与模块增强具有相同的行为和限制。
+
+## 枚举
+
+Enums 是 TypeScript 的少数几个特性之一，它不是 JavaScript 的类型级扩展。
+
+枚举允许开发人员定义一组命名的常量。使用枚举可以使记录意图更加容易，或者创建一组不同的案例。ts提供了数字和基于字符串的枚举。
+
+###  数字枚举
+
+我们首先从数字枚举开始，如果你来自其他语言，它可能更为熟悉。枚举可以使用enum关键字定义。
+
+```typescript
+enum Direction {
+  Up = 1,
+  Down,
+  Left,
+  Right,
+}
+```
+
+上面，我们有一个数值枚举，其中 Up 初始化为1。以下所有成员都从该点开始自动递增。换句话说，Direction.Up 的值是1，Down 的值是2，Left 的值是3，Right 的值是4。
+
+如果我们愿意，我们可以完全忽略初始化:
+
+```typescript
+enum Direction {
+  Up,
+  Down,
+  Left,
+  Right,
+}
+```
+
+这里，Up 的值是0，Down 的值是1，等等。这种自动递增行为对于我们可能不关心成员值本身，但是确实关心每个值与同一枚举中的其他值不同的情况非常有用。
+
+使用枚举非常简单: 只需将任何成员作为枚举本身的属性访问，并使用枚举的名称声明类型:
+
+```typescript
+enum UserResponse {
+  No = 0,
+  Yes = 1,
+}
+
+function respond(recipient: string, message: UserResponse): void {
+  // ...
+}
+
+respond("Princess Caroline", UserResponse.Yes);
+```
+
+数值枚举可以混合使用计算成员和常量成员(见下文)。简而言之，没有初始化的枚举要么需要放在第一位，要么必须放在用数字常量或其他常量枚举成员初始化的数字枚举之后。换句话说，以下内容是不允许的:
+
+```typescript
+enum E {
+  A = getSomeValue(),
+  B,
+/Enum member must have initializer.
+}
+```
+
+### 字符串枚举
+
+字符串枚举是一个类似的概念，但是在运行时有一些细微的差别，如下文所述。在字符串枚举中，必须使用字符串文字或另一个字符串枚举成员对每个成员进行常量初始化。
+
+```typescript
+enum Direction {
+  Up = "UP",
+  Down = "DOWN",
+  Left = "LEFT",
+  Right = "RIGHT",
+}
+```
+
+虽然字符串枚举不具有自动递增行为，但字符串枚举的好处是它们可以很好地“序列化”。换句话说，如果您正在调试并且必须读取一个数值枚举的运行时值，那么该值通常是不透明的——它本身并不传达任何有用的意义(尽管反向映射通常有帮助) ，字符串枚举允许您在代码运行时给出一个有意义且可读的值，与枚举成员本身的名称无关。
+
+### 异构枚举
+
+从技术上讲，enum 可以与字符串和数字成员混合使用，但不清楚为什么要这样做:
+
+```typescript
+enum BooleanLikeHeterogeneousEnum {
+  No = 0,
+  Yes = "YES",
+}
+```
+
+除非你真的想聪明地利用 JavaScript 的运行时行为，否则建议你不要这样做。
+
+### 计算成员和常量成员
+
+每个枚举成员都有一个与之关联的值，该值可以是常量，也可以是计算值。一个枚举成员被认为是常量，如果:
+
+* 它是枚举中的第一个成员，没有初始化式，在这种情况下，它被赋值为0:
+
+  ```typescript
+  // E.X is constant:
+  enum E {
+  X,
+  }
+  ```
+
+* 它没有初始值设定项，前面的枚举成员是一个数值常数。在这种情况下，当前枚举成员的值将是前一个枚举成员加一的值。
+
+  ```typescript
+  // All enum members in 'E1' and 'E2' are constant.
+  
+  enum E1 {
+  X,
+  Y,
+  Z,
+  }
+  
+  enum E2 {
+  A = 1,
+  B,
+  C,
+  }
+  ```
+
+* 使用常量枚举表达式初始化枚举成员。常量枚举表达式是可以在编译时完全计算的 TypeScript 表达式的子集。表达式是一个常量枚举表达式，如果它是:
+
+  1. 一个文本枚举表达式(基本上是一个字符串文本或者一个数值文本)
+  2. 对先前定义的常量枚举成员的引用(可以来自不同的枚举)
+  3. 带括号的常量 enum 表达式
+  4. 一元运算符 `+`, `-`, `~`其中之一应用在了常量枚举表达式
+  5. 常量枚举表达式做为二元运算符 `+`, `-`, `*`, `/`, `%`, `<<`, `>>`, `>>>`, `&`, `|`, `^`的操作对象。
+
+  若常数枚举表达式求值后为 `NaN`或 `Infinity`，则会在编译阶段报错。
+
+在所有其他情况下，我们认为是计算成员。
+
+```typescript
+enum FileAccess {
+  // constant members
+  None,
+  Read = 1 << 1,
+  Write = 1 << 2,
+  ReadWrite = Read | Write,
+  // computed member
+  G = "123".length,
+}
+```
+
+### 联合枚举与枚举成员的类型
+
+存在一种特殊的非计算的常量枚举成员的子集：字面量枚举成员。 字面量枚举成员是指不带有初始值的常量枚举成员，或者是值被初始化为:
+
+- 任何字符串字面量（例如： `"foo"`， `"bar"`， `"baz"`）
+- 任何数字字面量（例如： `1`, `100`）
+- 应用了一元 `-`符号的数字字面量（例如： `-1`, `-100`）
+
+当所有枚举成员都拥有字面量枚举值时，它就带有了一种特殊的语义。
+
+首先，枚举成员成为了类型！ 例如，我们可以说某些成员 *只能*是枚举成员的值：
+
+```typescript
+enum ShapeKind {
+  Circle,
+  Square,
+}
+
+interface Circle {
+  kind: ShapeKind.Circle;
+  radius: number;
+}
+
+interface Square {
+  kind: ShapeKind.Square;
+  sideLength: number;
+}
+
+let c: Circle = {
+  kind: ShapeKind.Square,
+/Type 'ShapeKind.Square' is not assignable to type 'ShapeKind.Circle'.
+  radius: 100,
+};
+```
+
+另一个变化是枚举类型本身有效地成为每个枚举成员的联合。使用 union 枚举，类型系统能够利用这样一个事实，即它知道枚举本身中存在的确切值集。正因为如此，TypeScript 可以在我们可能比较错误值的地方捕捉 bug。例如:
+
+```typescript
+enum E {
+  Foo,
+  Bar,
+}
+
+function f(x: E) {
+  if (x !== E.Foo || x !== E.Bar) {
+/This condition will always return 'true' since the types 'E.Foo' and 'E.Bar' have no overlap.
+    //
+  }
+}
+```
+
+在这个例子中，我们首先检查 x 是否不是 E.Foo。如果检查成功，那么我们的 | | 将会短路，并且“ If”的主体将会运行。然而，如果检查没有成功，那么 x 只能是 E.Foo，所以看它是否等于 E.Bar 是没有意义的。
+
+### 运行时的枚举
+
+枚举是在运行时存在的真实对象。 例如下面的枚举：
+
+```typescript
+enum E {
+  X,
+  Y,
+  Z,
+}
+```
+
+实际上可以传递给函数
+
+```typescript
+enum E {
+  X,
+  Y,
+  Z,
+}
+
+function f(obj: { X: number }) {
+  return obj.X;
+}
+
+// Works, since 'E' has a property named 'X' which is a number.
+f(E);
+```
+
+### 编译时的枚举
+
+尽管 Enums 是在运行时存在的真实对象，但是关键字的 keyof 与典型对象的工作方式可能不同。相反，使用 keyof typeof 键获得一个 Type，该 Type 将所有枚举键表示为字符串。
+
+```typescript
+enum LogLevel {
+  ERROR,
+  WARN,
+  INFO,
+  DEBUG,
+}
+
+/**
+ * This is equivalent to:
+ * type LogLevelStrings = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
+ */
+type LogLevelStrings = keyof typeof LogLevel;
+
+function printImportant(key: LogLevelStrings, message: string) {
+  const num = LogLevel[key];
+  if (num <= LogLevel.WARN) {
+    console.log("Log level key is:", key);
+    console.log("Log level value is:", num);
+    console.log("Log level message is:", message);
+  }
+}
+printImportant("ERROR", "This is a message");
+```
+
+### 反向映射
+
+除了为成员创建具有属性名称的对象之外，numeric 枚举成员还可以从枚举值反向映射到枚举名称。例如，在这个例子中:
+
+```typescript
+enum Enum {
+  A,
+}
+
+let a = Enum.A;
+let nameOfA = Enum[a]; // "A"
+```
+
+将其编译成以下 JavaScript:
+
+```typescript
+"use strict";
+var Enum;
+(function (Enum) {
+    Enum[Enum["A"] = 0] = "A";
+})(Enum || (Enum = {}));
+let a = Enum.A;
+let nameOfA = Enum[a]; // "A"
+```
+
+在这个生成的代码中，枚举被编译成一个对象，该对象同时存储正向(name-> value)和反向(value-> name)映射。对其他枚举成员的引用始终作为属性访问发出，并且从不内联。
+
+请记住，字符串枚举成员根本不会得到反向映射。
+
+### `const`枚举
+
+大多数情况下，枚举是十分有效的方案。 然而在某些情况下需求很严格。 为了避免在额外生成的代码上的开销和额外的非直接的对枚举成员的访问，我们可以使用 `const`枚举。 常量枚举通过在枚举上使用 `const`修饰符来定义。
+
+```typescript
+const enum Enum {
+  A = 1,
+  B = A * 2,
+}
+```
+
+常量枚举只能使用常量枚举表达式，并且不同于常规的枚举，它们在编译阶段会被删除。 常量枚举成员在使用的地方会被内联进来。 之所以可以这么做是因为，常量枚举不允许包含计算成员。
+
+```typescript
+const enum Direction {
+  Up,
+  Down,
+  Left,
+  Right,
+}
+
+let directions = [
+  Direction.Up,
+  Direction.Down,
+  Direction.Left,
+  Direction.Right,
+];
+```
+
+生成后的代码为：
+
+```typescript
+"use strict";
+let directions = [
+    0 /* Up */,
+    1 /* Down */,
+    2 /* Left */,
+    3 /* Right */,
+];
+```
+
+### 外部枚举
+
+外部枚举用来描述已经存在的枚举类型的形状。
+
+```typescript
+declare enum Enum {
+  A = 1,
+  B,
+  C = 2,
+}
+```
+
+外部枚举和非外部枚举之间有一个重要的区别，在正常的枚举里，没有初始化方法的成员被当成常数成员。 对于非常数的外部枚举而言，没有初始化方法时被当做需要经过计算的。
+
+### 对象vs枚举
+
+在现代typescript中，当一个对象以as const作为后缀你可能不需要一个枚举 :
+
+```typescript
+const enum EDirection {
+  Up,
+  Down,
+  Left,
+  Right,
+}
+
+const ODirection = {
+  Up: 0,
+  Down: 1,
+  Left: 2,
+  Right: 3,
+} as const;
+
+EDirection.Up;
+           
+(enum member) EDirection.Up = 0
+
+ODirection.Up;
+           
+(property) Up: 0
+
+// Using the enum as a parameter
+function walk(dir: EDirection) {}
+
+// It requires an extra line to pull out the keys
+type Direction = typeof ODirection[keyof typeof ODirection];
+function run(dir: Direction) {}
+
+walk(EDirection.Left);
+run(ODirection.Right);
+```
+
+支持这种格式而不支持 TypeScript 的 enum 的最大理由是，它使代码库与 JavaScript 的状态保持一致，并且当/如果将枚举添加到 JavaScript 中，那么您就可以转移到附加语法。
+
+## 迭代器和生成器
+
+### Iterables
+
+如果对象具有 Symbol.iterator 属性的实现，则认为该对象是可迭代的。一些内置类型，如 Array、 Map、 Set、 String、 Int32Array、 Uint32Array 等，已经实现了它们的 Symbol.iterator 属性。对象上的 iterator 函数负责返回要迭代的值列表。
+
+#### `Iterable`  interface
+
+如果我们想接受上面列出的可迭代的类型，可以使用 Iterable 类型。下面是一个例子:
+
+```typescript
+function toArray<X>(xs: Iterable<X>): X[] {
+  return [...xs]
+}
+```
+
+#### `for..of`statements
+
+`for..of` 在一个可迭代的对象上循环，调用在这个对象上的`Symbol.iterator` 属性。这里有一个简单数组上的`for..of`循环的例子:
+
+```typescript
+let someArray = [1, "string", false];
+
+for (let entry of someArray) {
+  console.log(entry); // 1, "string", false
+}
+```
+
+#### `for..of`vs.`for..in`statements
+
+ `for..of`和`for..in`均可迭代一个列表；但是用于迭代的值却不同，`for..in`迭代的是对象的 *键* 的列表，而`for..of`则迭代对象的键对应的值。
+
+下面的例子展示了两者之间的区别：
+
+```typescript
+let list = [4, 5, 6];
+for (let i in list) {
+  console.log(i); // "0", "1", "2",
+}
+for (let i of list) {
+  console.log(i); // 4, 5, 6
+}
+```
+
+另一个区别是`for..in`可以操作任何对象；它提供了查看对象属性的一种方法。 但是 `for..of`关注于迭代对象的值。内置对象`Map`和`Set`已经实现了`Symbol.iterator`方法，让我们可以访问它们保存的值。
+
+```typescript
+let pets = new Set(["Cat", "Dog", "Hamster"]);
+pets["species"] = "mammals";
+for (let pet in pets) {
+  console.log(pet); // "species"
+}
+for (let pet of pets) {
+  console.log(pet); // "Cat", "Dog", "Hamster"
+}
+```
+
+#### Code generation代码生成
+
+##### 目标为 ES5 和 ES3
+
+当定位符合 ES5或 es3的引擎时，迭代器只允许在 Array 类型的值上使用。在非数组上使用for...of是一个错误使用。.即使这些非 array 值实现了 symboli.iterator 属性。
+
+编译器将为 for. . of循环生成一个简单的 for 循环，例如:
+
+```typescript
+let numbers = [1, 2, 3];
+for (let num of numbers) {
+  console.log(num);
+}
+```
+
+会以下列方式产生:
+
+```typescript
+var numbers = [1, 2, 3];
+for (var _i = 0; _i < numbers.length; _i++) {
+  var num = numbers[_i];
+  console.log(num);
+}
+```
+
+##### 目标为 ECMAScript 2015 或更高
+
+当目标为兼容ECMAScipt 2015的引擎时，编译器会生成相应引擎的`for..of`内置迭代器实现方式。
+
+## JSX
+
+[JSX](https://facebook.github.io/jsx/)是一种嵌入式的类似XML的语法。 它可以被转换成合法的JavaScript，尽管转换的语义是依据不同的实现而定的。 JSX因[React](https://reactjs.org/)框架而流行，但也存在其它的实现。 TypeScript支持内嵌，类型检查以及将JSX直接编译为JavaScript。
+
+### 基本用法
+
+想要使用JSX必须做两件事：
+
+1. 给文件一个`.tsx`扩展名
+2. 启用`jsx`选项
+
+TypeScript具有三种JSX模式：`preserve`，`react`和`react-native`。 这些模式只在代码生成阶段起作用 - 类型检查并不受影响。 在`preserve`模式下生成代码中会保留JSX以供后续的转换操作使用（比如：[Babel](https://babeljs.io/)）。 另外，输出文件会带有`.jsx`扩展名。 `react`模式会生成`React.createElement`，在使用前不需要再进行转换操作了，输出文件的扩展名为`.js`。 `react-native`相当于`preserve`，它也保留了所有的JSX，但是输出文件的扩展名是`.js`。
+
+| Mode           | Input     | Output                                            | Output File Extension |
+| :------------- | :-------- | :------------------------------------------------ | :-------------------- |
+| `preserve`     | `<div />` | `<div />`                                         | `.jsx`                |
+| `react`        | `<div />` | `React.createElement("div")`                      | `.js`                 |
+| `react-native` | `<div />` | `<div />`                                         | `.js`                 |
+| `react-jsx`    | `<div />` | `_jsx("div", {}, void 0);`                        | `.js`                 |
+| `react-jsxdev` | `<div />` | `_jsxDEV("div", {}, void 0, false, {...}, this);` | `.js`                 |
+
+你可以通过在命令行里使用`--jsx`标记或[tsconfig.json](https://www.tslang.cn/docs/handbook/tsconfig-json.html)里的选项来指定模式。
+
+> \* 注意: 您可以指定在目标反应 JSX 生成时使用的 JSX 工厂函数，使用 -- jsxFactory 选项(默认为 React.createElement)
+
+### as 操作符
+
+回想一下如何编写类型断言:
+
+```typescript
+var foo = <foo>bar;
+```
+
+这里断言`bar`变量是`foo`类型的。 因为TypeScript也使用尖括号来表示类型断言，在结合JSX的语法后将带来解析上的困难。因此，TypeScript在`.tsx`文件里禁用了使用尖括号的类型断言。
+
+由于不能够在`.tsx`文件里使用上述语法，因此我们应该使用另一个类型断言操作符：`as`。 上面的例子可以很容易地使用`as`操作符改写：
+
+```typescript
+var foo = bar as foo;
+```
+
+`as`操作符在`.ts`和`.tsx`里都可用，并且与尖括号类型断言行为是等价的。
+
+### 类型检查
+
+为了理解JSX的类型检查，你必须首先理解固有元素与基于值的元素之间的区别。 假设有这样一个JSX表达式`<expr />`，`expr`可能引用环境自带的某些东西（比如，在DOM环境里的`div`或`span`）或者是你自定义的组件。 这是非常重要的，原因有如下两点：
+
+1. 对于React，固有元素会生成字符串（`React.createElement("div")`），然而由你自定义的组件却不会生成（`React.createElement(MyComponent)`）。
+2. 传入JSX元素里的属性类型的查找方式不同。 固有元素属性*本身*就支持，然而自定义的组件会自己去指定它们具有哪个属性。
+
+TypeScript使用[与React相同的规范](http://facebook.github.io/react/docs/jsx-in-depth.html#html-tags-vs.-react-components) 来区别它们。 固有元素总是以一个小写字母开头，基于值的元素总是以一个大写字母开头。
+
+#### 固有元素
+
+固有元素使用特殊的接口`JSX.IntrinsicElements`来查找。 默认地，如果这个接口没有指定，会全部通过，不对固有元素进行类型检查。 然而，如果这个接口存在，那么固有元素的名字需要在`JSX.IntrinsicElements`接口的属性里查找。 例如：
+
+```ts
+declare namespace JSX {
+    interface IntrinsicElements {
+        foo: any
+    }
+}
+
+<foo />; // 正确
+<bar />; // 错误
+```
+
+在上例中，`<foo />`没有问题，但是`<bar />`会报错，因为它没在`JSX.IntrinsicElements`里指定。
+
+> 注意：你也可以在`JSX.IntrinsicElements`上指定一个用来捕获所有的字符串索引：
+
+```typescript
+declare namespace JSX {
+    interface IntrinsicElements {
+        [elemName: string]: any;
+    }
+}
+```
+
+#### 基于值的元素
+
+基于值的元素会简单的在它所在的作用域里按标识符查找。
+
+```typescript
+import MyComponent from "./myComponent";
+<MyComponent />; // ok
+<SomeOtherComponent />; // error
+```
+
+定义基于值的元素有两种方法:
+
+1. 函数组件
+2. 类组件
+
+由于在 JSX 表达式中，这两种类型的基于值的元素彼此无法区分，因此 TS 首先尝试使用重载解析将表达式解析为一个函数组件。如果进程成功，则 TS 完成将表达式解析为其声明。如果该值未能作为函数组件进行解析，则 TS 将尝试将其作为类组件进行解析。如果失败，TS 将报告一个错误。
+
+##### 函数组件
+
+顾名思义，组件被定义为 JavaScript 函数，其第一个参数是 props 对象。TS 强制其返回类型必须可分配给 JSX.Element。
+
+```typescript
+interface FooProp {
+  name: string;
+  X: number;
+  Y: number;
+}
+declare function AnotherComponent(prop: { name: string });
+function ComponentFoo(prop: FooProp) {
+  return <AnotherComponent name={prop.name} />;
+}
+const Button = (prop: { value: string }, context: { color: string }) => (
+  <button />
+);
+```
+
+因为函数组件只是一个 JavaScript 函数，所以函数重载也可以在这里使用:
+
+```typescript
+interface ClickableProps {
+  children: JSX.Element[] | JSX.Element;
+}
+
+interface HomeProps extends ClickableProps {
+  home: JSX.Element;
+}
+
+interface SideProps extends ClickableProps {
+  side: JSX.Element | string;
+}
+
+function MainButton(prop: HomeProps): JSX.Element;
+function MainButton(prop: SideProps): JSX.Element;
+function MainButton(prop: ClickableProps): JSX.Element {
+  // ...
+}
+```
+
+> 注: 函数组件以前称为无状态函数组件(SFC)。由于在最近的 react 版本中，Function Components 不再被认为是无状态的，SFC 类型及其别名 StatelessComponent 已被弃用。
+
+##### 类组件
+
+可以定义类组件的类型。但是，要做到这一点，最好理解两个新术语: 元素类类型和元素实例类型。
+
+给定 < Expr/> ，元素类型是 Expr 的类型。所以在上面的例子中，如果 MyComponent 是一个 ES6类，那么类类型就是该类的构造函数和静态函数。如果 MyComponent 是一个工厂函数，那么类类型就是这个函数。
+
+一旦建立了类类型，实例类型就由类类型的构造或调用签名的返回类型的联合确定(以出现的类型为准)。同样，对于 ES6类，实例类型是该类的实例的类型，对于工厂函数，实例类型是从函数返回的值的类型。
+
+```typescript
+class MyComponent {
+  render() {}
+}
+// use a construct signature
+var myComponent = new MyComponent();
+// element class type => MyComponent
+// element instance type => { render: () => void }
+function MyFactoryFunction() {
+  return {
+    render: () => {},
+  };
+}
+// use a call signature
+var myComponent = MyFactoryFunction();
+// element class type => MyFactoryFunction
+// element instance type => { render: () => void }
+```
+
+元素实例类型很有意思，因为它必须可分配给 JSX.ElementClass，否则将导致错误。默认情况下，JSX.ElementClass 是{} ，但是可以对它进行扩展，将 JSX 的使用限制为只使用符合适当接口的类型。
+
+```typescript
+declare namespace JSX {
+  interface ElementClass {
+    render: any;
+  }
+}
+class MyComponent {
+  render() {}
+}
+function MyFactoryFunction() {
+  return { render: () => {} };
+}
+<MyComponent />; // ok
+<MyFactoryFunction />; // ok
+class NotAValidComponent {}
+function NotAValidFactoryFunction() {
+  return {};
+}
+<NotAValidComponent />; // error
+<NotAValidFactoryFunction />; // error
+```
+
+### 属性类型检查
+
+类型检查属性的第一步是确定元素属性类型。这在内在元素和基于值的元素之间略有不同。
+
+对于内部元素，它是 JSX.IntrinsicElements 上属性的类型
+
+```typescript
+declare namespace JSX {
+  interface IntrinsicElements {
+    foo: { bar?: boolean };
+  }
+}
+// element attributes type for 'foo' is '{bar?: boolean}'
+<foo bar />;
+```
+
+对于基于值的元素，它要稍微复杂一些。它由先前确定的元素实例类型上的属性类型决定。由 JSX.ElementAttributesProperty 决定使用哪个属性。它应该用一个属性来声明。然后使用该属性的名称。从 TypeScript 2.8开始，如果没有提供 JSX.ElementAttributesProperty，则将使用类元素的构造函数或函数组件的调用的第一个参数类型。
+
+```typescript
+declare namespace JSX {
+  interface ElementAttributesProperty {
+    props; // specify the property name to use
+  }
+}
+class MyComponent {
+  // specify the property on the element instance type
+  props: {
+    foo?: string;
+  };
+}
+// element attributes type for 'MyComponent' is '{foo?: string}'
+<MyComponent foo="bar" />;
+```
+
+元素属性类型用于检查 JSX 中的属性。支持可选和必需的属性。
+
+```typescript
+declare namespace JSX {
+  interface IntrinsicElements {
+    foo: { requiredProp: string; optionalProp?: number };
+  }
+}
+<foo requiredProp="bar" />; // ok
+<foo requiredProp="bar" optionalProp={0} />; // ok
+<foo />; // error, requiredProp is missing
+<foo requiredProp={0} />; // error, requiredProp should be a string
+<foo requiredProp="bar" unknownProp />; // error, unknownProp does not exist
+<foo requiredProp="bar" some-unknown-prop />; // ok, because 'some-unknown-prop' is not a valid identifier
+```
+
+> 注意: 如果属性名称不是有效的 JS 标识符(如 data-* 属性) ，那么如果在元素属性类型中没有找到它，则不认为它是错误。
+
+此外，可以使用 JSX.IntrinsicAttributes 接口指定 JSX 框架使用的额外属性，这些属性通常不被组件的属性或参数使用——例如 React 中的 key。进一步说，泛型 JSX.IntrinsicClassAttributes < t > 类型也可以用来指定类组件(而不是函数组件)的同类额外属性。在此类型中，泛型参数对应于类实例类型。在 React 中，这用于允许类型 Ref < t > 的 Ref 属性。一般来说，这些接口上的所有属性都应该是可选的，除非您希望 JSX 框架的用户需要为每个标记提供一些属性。
+
+延展操作符也可以使用：
+
+```typescript
+var props = { requiredProp: "bar" };
+<foo {...props} />; // ok
+var badProps = {};
+<foo {...badProps} />; // error
+```
+
+### 子类型检查
+
+在 TypeScript 2.3中，TS 引入了子类型检查。Children 是元素属性类型中的特殊属性，其中子 jsxexpression 被插入到属性中。与 TS 使用 JSX.ElementAttributesProperty 确定 props 的名称类似，TS 使用 JSX.ElementChildrenAttribute 确定这些 props 中的子节点的名称。Elementchildrenattribute 应该使用单个属性声明。
+
+```typescript
+declare namespace JSX {
+  interface ElementChildrenAttribute {
+    children: {}; // specify children name to use
+  }
+}
+```
+
+```jsx
+<div>
+  <h1>Hello</h1>
+</div>;
+<div>
+  <h1>Hello</h1>
+  World
+</div>;
+const CustomComp = (props) => <div>{props.children}</div>
+<CustomComp>
+  <div>Hello World</div>
+  {"This is just a JS expression..." + 1000}
+</CustomComp>
+```
+
+您可以像指定其他属性一样指定子属性的类型。这将覆盖来自的默认类型(如使用 React typing)。
+
+```jsx
+interface PropsType {
+  children: JSX.Element
+  name: string
+}
+class Component extends React.Component<PropsType, {}> {
+  render() {
+    return (
+      <h2>
+        {this.props.children}
+      </h2>
+    )
+  }
+}
+// OK
+<Component name="foo">
+  <h1>Hello World</h1>
+</Component>
+// Error: children is of type JSX.Element not array of JSX.Element
+<Component name="bar">
+  <h1>Hello World</h1>
+  <h2>Hello World</h2>
+</Component>
+// Error: children is of type JSX.Element not array of JSX.Element or string.
+<Component name="baz">
+  <h1>Hello</h1>
+  World
+</Component>
+```
+
+### JSX 结果类型
+
+默认情况下，JSX 表达式的结果类型为 any。您可以通过指定 JSX.Element 接口来自定义类型。但是，无法从这个接口检索有关元素、属性或 JSX 的子接口的类型信息。这是一个黑盒子。
+
+### 嵌入表达式
+
+JSX 允许通过在表达式周围加上花括号(`{}`)在标记之间嵌入表达式。
+
+```jsx
+var a = (
+  <div>
+    {["foo", "bar"].map((i) => (
+      <span>{i / 2}</span>
+    ))}
+  </div>
+);
+```
+
+上面的代码将导致一个错误，因为您不能用数字除字符串。当使用 preserve 选项时，输出如下:
+
+```tsx
+var a = (
+  <div>
+    {["foo", "bar"].map(function (i) {
+      return <span>{i / 2}</span>;
+    })}
+  </div>
+);
+```
+
+### React整合
+
+要使用 JSX 和 React，你应该使用 React 类型。这些输入恰当地定义了用于 React 的 JSX 命名空间。
+
+```jsx
+/// <reference path="react.d.ts" />
+interface Props {
+  foo: string;
+}
+class MyComponent extends React.Component<Props, {}> {
+  render() {
+    return <span>{this.props.foo}</span>;
+  }
+}
+<MyComponent foo="bar" />; // ok
+<MyComponent foo={0} />; // error
+```
+
+#### 配置 JSX
+
+有多个编译器标志可以用来自定义 JSX，它既可以作为编译器标志，也可以通过内联每文件 pragmas 工作。要了解更多，请查看他们的 tsconfig 参考页面:
+
+- [`jsxFactory`](https://www.typescriptlang.org/tsconfig/#jsxFactory)
+- [`jsxFragmentFactory`](https://www.typescriptlang.org/tsconfig/#jsxFragmentFactory)
+- [`jsxImportSource`](https://www.typescriptlang.org/tsconfig/#jsxImportSource)
+
+## 混入(mixins)
+
+除了传统的面向对象层次结构，另一种由可重用组件构建类的流行方法是通过组合更简单的部分类来构建类。您可能熟悉混入的概念或诸如 Scala 之类的语言的特性，这种模式在 JavaScript 社区中也颇受欢迎。
+
+### 一个混入是如何工作的？
+
+该模式依赖于使用具有类继承的泛型来扩展基类。TypeScript的最佳 mixin 支持是通过类表达式模式完成的。你可以在这里阅读更多关于这个模式如何在 JavaScript 中工作的信息。
+
+为了开始，我们需要一个类，它将把 mixin 应用到以下代码之上:
+
+```typescript
+class Sprite {
+  name = "";
+  x = 0;
+  y = 0;
+
+  constructor(name: string) {
+    this.name = name;
+  }
+}
+```
+
+然后，您需要一个类型和一个工厂函数，该函数返回一个扩展基类的类表达式。
+
+```typescript
+// To get started, we need a type which we'll use to extend
+// other classes from. The main responsibility is to declare
+// that the type being passed in is a class.
+
+type Constructor = new (...args: any[]) => {};
+
+// This mixin adds a scale property, with getters and setters
+// for changing it with an encapsulated private property:
+
+function Scale<TBase extends Constructor>(Base: TBase) {
+  return class Scaling extends Base {
+    // Mixins may not declare private/protected properties
+    // however, you can use ES2020 private fields
+    _scale = 1;
+
+    setScale(scale: number) {
+      this._scale = scale;
+    }
+
+    get scale(): number {
+      return this._scale;
+    }
+  };
+}
+```
+
+这些都设置好之后，你就可以创建一个类，用 mixin 表示基类:
+
+```typescript
+// Compose a new class from the Sprite class,
+// with the Mixin Scale applier:
+const EightBitSprite = Scale(Sprite);
+
+const flappySprite = new EightBitSprite("Bird");
+flappySprite.setScale(0.8);
+console.log(flappySprite.scale);
+```
+
+### 被约束的混入
+
+在上面的表单中，mixin 没有类的基础知识，这使得创建您想要的设计变得困难。
+
+为了对此建模，我们修改原始构造函数类型以接受泛型参数。
+
+```typescript
+// This was our previous constructor:
+type Constructor = new (...args: any[]) => {};
+// Now we use a generic version which can apply a constraint on
+// the class which this mixin is applied to
+type GConstructor<T = {}> = new (...args: any[]) => T;
+```
+
+这允许创建只能使用受约束的基类的类:
+
+```typescript
+type Positionable = GConstructor<{ setPos: (x: number, y: number) => void }>;
+type Spritable = GConstructor<Sprite>;
+type Loggable = GConstructor<{ print: () => void }>;
+```
+
+然后你可以创建 mixin，只有当你有一个特定的基础的时候它才能工作:
+
+```typescript
+function Jumpable<TBase extends Positionable>(Base: TBase) {
+  return class Jumpable extends Base {
+    jump() {
+      // This mixin will only work if it is passed a base
+      // class which has setPos defined because of the
+      // Positionable constraint.
+      this.setPos(0, 20);
+    }
+  };
+}
+```
+
+### 替代模式
+
+这个文档的以前版本推荐一种编写 mixin 的方法，你可以分别创建运行时和类型层次结构，然后在最后合并它们:
+
+```typescript
+// Each mixin is a traditional ES class
+class Jumpable {
+  jump() {}
+}
+
+class Duckable {
+  duck() {}
+}
+
+// Including the base
+class Sprite {
+  x = 0;
+  y = 0;
+}
+
+// Then you create an interface which merges
+// the expected mixins with the same name as your base
+interface Sprite extends Jumpable, Duckable {}
+// Apply the mixins into the base class via
+// the JS at runtime
+applyMixins(Sprite, [Jumpable, Duckable]);
+
+let player = new Sprite();
+player.jump();
+console.log(player.x, player.y);
+
+// This can live anywhere in your codebase:
+function applyMixins(derivedCtor: any, constructors: any[]) {
+  constructors.forEach((baseCtor) => {
+    Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
+      Object.defineProperty(
+        derivedCtor.prototype,
+        name,
+        Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
+          Object.create(null)
+      );
+    });
+  });
+}
+```
+
+此模式较少依赖于编译器，而更多地依赖于代码库，以确保运行时和类型系统正确地保持同步。
+
+###  约束
+
+代码流分析在 TypeScript 编译器内本机支持 mixin 模式。在一些情况下，您可以触及本机支持的边缘。
+
+##### 装饰器和混入
+
+您不能使用 decorator 通过代码流分析提供 mixin:
+
+```typescript
+// A decorator function which replicates the mixin pattern:
+const Pausable = (target: typeof Player) => {
+  return class Pausable extends target {
+    shouldFreeze = false;
+  };
+};
+
+@Pausable
+class Player {
+  x = 0;
+  y = 0;
+}
+
+// The Player class does not have the decorator's type merged:
+const player = new Player();
+player.shouldFreeze;
+/Property 'shouldFreeze' does not exist on type 'Player'.
+
+// It the runtime aspect could be manually replicated via
+// type composition or interface merging.
+type FreezablePlayer = Player & { shouldFreeze: boolean };
+
+const playerTwo = (new Player() as unknown) as FreezablePlayer;
+playerTwo.shouldFreeze;
+```
+
+##### 静态属性混入
+
+与其说是一种约束，不如说是一种捕捉。类表达式模式创建单件，因此不能在类型系统中映射它们以支持不同的变量类型。
+
+你可以通过使用函数返回类来解决这个问题，它依据泛型而变化:
+
+```typescript
+function base<T>() {
+  class Base {
+    static prop: T;
+  }
+  return Base;
+}
+
+function derived<T>() {
+  class Derived extends base<T>() {
+    static anotherProp: T;
+  }
+  return Derived;
+}
+
+class Spec extends derived<string>() {}
+
+Spec.prop; // string
+Spec.anotherProp; // string
+```
+
+## 模块
+
+从 ECMAScript 2015开始，JavaScript 就有了模块的概念，TypeScript 也有这个概念。	
+
+模块在自己的作用域内执行，而不是在全局作用域中执行; 这意味着在模块中声明的变量、函数、类等在模块外不可见，除非使用某种导出形式显式导出它们。相反，要使用从不同模块导出的变量、函数、类、接口等，必须使用导入形式之一导入该变量。
+
+模块是声明性的; 模块之间的关系是在文件级别的导入和导出中指定的。
+
+模块使用模块加载程序彼此导入。在运行时，模块加载程序负责在执行模块之前查找并执行模块的所有依赖项。JavaScript 中使用的众所周知的模块加载器是 Node.js 的 CommonJS 模块加载器和 Web 应用程序中 AMD 模块的 RequireJS 加载器。
+
+在 TypeScript 中，就像在 ECMAScript 2015中一样，任何包含顶级导入或导出的文件都被视为模块。相反，没有任何顶级导入或导出声明的文件被视为其内容在全局范围内可用的脚本(因此对模块也是如此)。
+
+### Export
+
+#### 导出一个声明
+
+任何一个声明（例如一个变量、函数、类、类型别名、或接口）都能够被以添加export关键字的方式导出。
+
+##### StringValidator.ts
+
+```typescript
+export interface StringValidator {
+  isAcceptable(s: string): boolean;
+}
+```
+
+##### ZipCodeValidator.ts
+
+```typescript
+import { StringValidator } from "./StringValidator";
+export const numberRegexp = /^[0-9]+$/;
+export class ZipCodeValidator implements StringValidator {
+  isAcceptable(s: string) {
+    return s.length === 5 && numberRegexp.test(s);
+  }
+}
+```
+
+#### 导出语句
+
+当“导出”需要为了使用者被重命名时，导出语句是非常方便的。因此上面的例子可以写成：
+
+```typescript
+class ZipCodeValidator implements StringValidator {
+  isAcceptable(s: string) {
+    return s.length === 5 && numberRegexp.test(s);
+  }
+}
+export { ZipCodeValidator };
+export { ZipCodeValidator as mainValidator };
+```
+
+#### 再导出
+
+通常模块继承其他模块，并部分的暴露他们的一些特性。一个再导出不会在本地导入，也不会引入局部变量。
+
+##### ParseIntBasedZipCodeValidator.ts
+
+```typescript
+export class ParseIntBasedZipCodeValidator {
+  isAcceptable(s: string) {
+    return s.length === 5 && parseInt(s).toString() === s;
+  }
+}
+// Export original validator but rename it
+export { ZipCodeValidator as RegExpBasedZipCodeValidator } from "./ZipCodeValidator";
+```
+
+可选地，模块可以包含一个或多个模块，并合并他们所有的使用`export * from "module"` 语法的”导出“。
+
+##### AllValidators.ts
+
+```typescript
+export * from "./StringValidator"; // exports 'StringValidator' interface
+export * from "./ZipCodeValidator"; // exports 'ZipCodeValidator' class and 'numberRegexp' constant value
+export * from "./ParseIntBasedZipCodeValidator"; //  exports the 'ParseIntBasedZipCodeValidator' class
+// and re-exports 'RegExpBasedZipCodeValidator' as alias
+// of the 'ZipCodeValidator' class from 'ZipCodeValidator.ts'
+// module.
+```
+
+### Import
+
+导入和从模块导出一样简单。导入一个被导出的声明是通过使用下面的导入方式之一完成的：
+
+#### 导入单个模块的导出
+
+```typescript
+import { ZipCodeValidator } from "./ZipCodeValidator";
+let myValidator = new ZipCodeValidator();
+```
+
+导入也可以被重新命名：
+
+```typescript
+import { ZipCodeValidator as ZCV } from "./ZipCodeValidator";
+let myValidator = new ZCV();
+```
+
+#### 将整个模块导入到单个变量中，并使用它访问模块导出
+
+```typescript
+import * as validator from "./ZipCodeValidator";
+let myValidator = new validator.ZipCodeValidator();
+```
+
+#### 只为辅助作用导入一个模块
+
+虽然不推荐实践，但是一些模块设置了一些可供其他模块使用的全局状态。这些模块可能没有任何导出，或者消费者对它们的任何导出都不感兴趣。要导入这些模块，请使用:
+
+```typescript
+import "./my-module.js";
+```
+
+#### 导入类型
+
+在TypeScript3.8之前，可以使用 `import` 导入类型。使用 TypeScript 3.8，您可以使用 `import` 语句导入类型，或者使用 `import type`。
+
+```typescript
+// Re-using the same import
+import { APIResponseType } from "./api";
+// Explicitly use import type
+import type { APIResponseType } from "./api";
+```
+
+`import type` 总是被保证从 JavaScript 中删除，像 Babel 这样的工具可以通过 `isolatedModules` 编译器标志对代码做出更好的假设。你可以在3.8发行说明中了解更多。
+
+### Default exports
+
+每个模块可以选择导出一个默认导出。默认导出用关键字`default` 标记; 每个模块只能有一个默认导出。默认导出使用不同的导入形式导入。
+
+默认导出真的很方便。例如，像 jQuery 这样的库可能有一个缺省的 jQuery 或 $导出，我们可能也会以 $或 jQuery 的名称导入。
+
+##### [JQuery.d.ts](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/jquery/JQuery.d.ts)
+
+```typescript
+declare let $: JQuery;
+export default $;
+```
+
+##### App.ts
+
+```typescript
+import $ from "jquery";
+$("button.continue").html("Next Step...");
+```
+
+类和函数声明可以作为默认导出直接编写。默认导出类和函数声明名称是可选的。
+
+##### ZipCodeValidator.ts
+
+```typescript
+export default class ZipCodeValidator {
+  static numberRegexp = /^[0-9]+$/;
+  isAcceptable(s: string) {
+    return s.length === 5 && ZipCodeValidator.numberRegexp.test(s);
+  }
+}
+```
+
+##### Test.ts
+
+```typescript
+import validator from "./ZipCodeValidator";
+let myValidator = new validator();
+```
+
+或
+
+##### StaticZipCodeValidator.ts
+
+```typescript
+const numberRegexp = /^[0-9]+$/;
+export default function (s: string) {
+  return s.length === 5 && numberRegexp.test(s);
+}
+```
+
+##### Test.ts
+
+```typescript
+import validate from "./StaticZipCodeValidator";
+let strings = ["Hello", "98052", "101"];
+// Use function validate
+strings.forEach((s) => {
+  console.log(`"${s}" ${validate(s) ? "matches" : "does not match"}`);
+});
+```
+
+默认导出也可以只是值:
+
+##### OneTwoThree.ts
+
+```typescript
+export default "123";
+```
+
+##### Log.ts
+
+```typescript
+import num from "./OneTwoThree";
+console.log(num); // "123"
+```
+
+### Export all as x
+
+使用 TypeScript 3.8，您可以使用 `export * as ns`  作为 一个别名，以另一个名称重新导出另一个模块:
+
+```typescript
+export * as utilities from "./utilities";
+```
+
+这会从一个模块中获取所有的依赖项，并将其作为一个导出字段，你可以这样导入它:
+
+```typescript
+import { utilities } from "./index";
+```
+
+### `export =`和`import = require()`
+
+CommonJS 和 AMD 通常都具有导出对象的概念，该对象包含来自模块的所有导出。
+
+它们还支持用自定义单个对象替换导出对象。默认导出意在替代这种行为; 然而，这两者是不兼容的。TypeScript支持 export = 对传统的 CommonJS 和 AMD 工作流进行建模。
+
+Export = 语法指定从模块导出的单个对象。这可以是类、接口、命名空间、函数或枚举。
+
+当使用 `export =` 导出模块时，必须使用特定于 typescript 的`import module = require("module")`导入模块。
+
+##### ZipCodeValidator.ts
+
+```typescript
+let numberRegexp = /^[0-9]+$/;
+class ZipCodeValidator {
+  isAcceptable(s: string) {
+    return s.length === 5 && numberRegexp.test(s);
+  }
+}
+export = ZipCodeValidator;
+```
+
+##### Test.ts
+
+```typescript
+import zip = require("./ZipCodeValidator");
+// Some samples to try
+let strings = ["Hello", "98052", "101"];
+// Validators to use
+let validator = new zip();
+// Show whether each string passed each validator
+strings.forEach((s) => {
+  console.log(
+    `"${s}" - ${validator.isAcceptable(s) ? "matches" : "does not match"}`
+  );
+});
+```
+
+### Code Generation for Modules
+
+根据编译过程中指定的模块目标，编译器将为 Node.js (CommonJS)、 require.js (AMD)、 UMD、 SystemJS 或 ECMAScript 2015本地模块加载系统(ES6)生成适当的代码。有关生成的代码中的定义、要求和注册调用的详细信息，请参阅每个模块加载程序的文档。
+
+这个简单的示例显示了如何将导入和导出期间使用的名称转换为模块加载代码。
+
+##### SimpleModule.ts
+
+```typescript
+import m = require("mod");
+export let t = m.something + 1;
+```
+
+##### AMD / RequireJS SimpleModule.js
+
+```typescript
+define(["require", "exports", "./mod"], function (require, exports, mod_1) {
+  exports.t = mod_1.something + 1;
+});
+```
+
+##### CommonJS / Node SimpleModule.js
+
+```typescript
+var mod_1 = require("./mod");
+exports.t = mod_1.something + 1;
+```
+
+##### UMD SimpleModule.js
+
+```js
+(function (factory) {
+  if (typeof module === "object" && typeof module.exports === "object") {
+    var v = factory(require, exports);
+    if (v !== undefined) module.exports = v;
+  } else if (typeof define === "function" && define.amd) {
+    define(["require", "exports", "./mod"], factory);
+  }
+})(function (require, exports) {
+  var mod_1 = require("./mod");
+  exports.t = mod_1.something + 1;
+});
+```
+
+##### System SimpleModule.js
+
+```typescript
+System.register(["./mod"], function (exports_1) {
+  var mod_1;
+  var t;
+  return {
+    setters: [
+      function (mod_1_1) {
+        mod_1 = mod_1_1;
+      },
+    ],
+    execute: function () {
+      exports_1("t", (t = mod_1.something + 1));
+    },
+  };
+});
+```
+
+##### Native ECMAScript 2015 modules SimpleModule.js
+
+```typescript
+import { something } from "./mod";
+export var t = something + 1;
+```
+
+###  简单的例子
+
+下面，我们合并了前面示例中使用的 Validator 实现，它只从每个模块导出一个命名的导出。
+
+要编译，我们必须在命令行上指定一个模块目标。对于 Node.js，使用 -- module commonjs; 对于 require.js，使用 -- module amd。例如:
+
+```typescript
+tsc --module commonjs Test.ts
+```
+
+在编译时，每个模块将成为一个单独的`.js`文件。与引用标记一样，编译器将遵循 import 语句编译依赖文件。
+
+##### Validation.ts
+
+```typescript
+export interface StringValidator {
+  isAcceptable(s: string): boolean;
+}
+```
+
+##### LettersOnlyValidator.ts
+
+```typescript
+import { StringValidator } from "./Validation";
+
+const lettersRegexp = /^[A-Za-z]+$/;
+
+export class LettersOnlyValidator implements StringValidator {
+  isAcceptable(s: string) {
+    return lettersRegexp.test(s);
+  }
+}
+```
+
+##### ZipCodeValidator.ts
+
+```typescript
+import { StringValidator } from "./Validation";
+
+const numberRegexp = /^[0-9]+$/;
+
+export class ZipCodeValidator implements StringValidator {
+  isAcceptable(s: string) {
+    return s.length === 5 && numberRegexp.test(s);
+  }
+}
+```
+
+##### Test.ts
+
+```typescript
+import { StringValidator } from "./Validation";
+import { ZipCodeValidator } from "./ZipCodeValidator";
+import { LettersOnlyValidator } from "./LettersOnlyValidator";
+
+// Some samples to try
+let strings = ["Hello", "98052", "101"];
+
+// Validators to use
+let validators: { [s: string]: StringValidator } = {};
+validators["ZIP code"] = new ZipCodeValidator();
+validators["Letters only"] = new LettersOnlyValidator();
+
+// Show whether each string passed each validator
+strings.forEach((s) => {
+  for (let name in validators) {
+    console.log(
+      `"${s}" - ${
+        validators[name].isAcceptable(s) ? "matches" : "does not match"
+      } ${name}`
+    );
+  }
+});
+```
+
+### 可选模块加载和其他高级加载场景
+
+在某些情况下，您可能只希望在某些条件下加载模块。在 TypeScript 中，我们可以使用下面所示的模式来实现这个和其他高级的加载场景，以直接调用模块加载器而不损失类型安全性。
+
+编译器检测生成的 JavaScript 中是否使用了每个模块。如果模块标识符只用作类型注释的一部分，而不用作表达式，则不会为该模块发出请求调用。省略未使用的引用是一个很好的性能优化，并且允许可选地加载这些模块。
+
+该模式的核心思想是，import id = require (”...”)语句使我们能够访问模块公开的类型。模块加载程序是动态调用(通过请求)的，如下面的 if 块所示。这利用了引用省略优化，因此只有在需要时才加载模块。为了使这个模式工作，重要的是通过`import`定义的符号只能用在类型位置(即永远不能用在将发射到 JavaScript 的位置)。
+
+为了保证类型安全，我们可以使用 typeof 关键字。当在类型位置中使用 typeof 关键字时，会生成值的类型，在本例中是模块的类型。
+
+##### Node.js里的动态模块加载
+
+```typescript
+declare function require(moduleName: string): any;
+import { ZipCodeValidator as Zip } from "./ZipCodeValidator";
+if (needZipValidation) {
+  let ZipCodeValidator: typeof Zip = require("./ZipCodeValidator");
+  let validator = new ZipCodeValidator();
+  if (validator.isAcceptable("...")) {
+    /* ... */
+  }
+}
+```
+
+##### 例子: require.js里的动态模块加载 
+
+```typescript
+declare function require(
+  moduleNames: string[],
+  onLoad: (...args: any[]) => void
+): void;
+import * as Zip from "./ZipCodeValidator";
+if (needZipValidation) {
+  require(["./ZipCodeValidator"], (ZipCodeValidator: typeof Zip) => {
+    let validator = new ZipCodeValidator.ZipCodeValidator();
+    if (validator.isAcceptable("...")) {
+      /* ... */
+    }
+  });
+}
+```
+
+##### 例子: System.js里的动态模块加载
+
+```typescript
+declare const System: any;
+import { ZipCodeValidator as Zip } from "./ZipCodeValidator";
+if (needZipValidation) {
+  System.import("./ZipCodeValidator").then((ZipCodeValidator: typeof Zip) => {
+    var x = new ZipCodeValidator();
+    if (x.isAcceptable("...")) {
+      /* ... */
+    }
+  });
+}
+```
+
+### 使用其他 JavaScript 库
+
+为了描述非用ts编写的库的形状，我们需要声明该库公开的 API。
+
+我们将不定义实现的声明称为“环境(ambient)”。通常，它们定义在`.d.ts` 文件。如果您熟悉 c/c + + ，可以将它们看作`.h`档案。让我们来看几个例子。
+
+#### 外部模块
+
+在 Node.js 中，大多数任务都是通过加载一个或多个模块来完成的。我们可以定义每个模块。使用顶级导出声明的 .d.ts 文件，但更方便的做法是将它们写成一个更大的.d.ts 文件。为此，我们使用了类似于外部命名空间的构造，但是我们使用了 module 关键字和引用的模块名称，以后的导入可以使用这些名称。例如:
+
+###### node.d.ts (simplified excerpt)
+
+```typescript
+declare module "url" {
+  export interface Url {
+    protocol?: string;
+    hostname?: string;
+    pathname?: string;
+  }
+  export function parse(
+    urlStr: string,
+    parseQueryString?,
+    slashesDenoteHost?
+  ): Url;
+}
+declare module "path" {
+  export function normalize(p: string): string;
+  export function join(...paths: any[]): string;
+  export var sep: string;
+}
+```
+
+现在我们可以`///<reference>` `node.d.ts`，然后使用 `import URL = require (“ URL”)`或 `import * as URL from “ url”`加载模块。
+
+```typescript
+/// <reference path="node.d.ts"/>
+import * as URL from "url";
+let myUrl = URL.parse("http://www.typescriptlang.org");
+```
+
+##### 外部模块简写
+
+如果在使用新模块之前不想花时间写出声明，可以使用一个简短的声明快速开始。
+
+###### declarations.d.ts
+
+```typescript
+declare module "hot-new-module";
+```
+
+从模块简写导入的所有模块都具有 any 类型。
+
+```typescript
+import x, { y } from "hot-new-module";
+x(y);
+```
+
+##### 模块声明通配符
+
+一些模块加载器(如 SystemJS 和 AMD)允许导入非 javascript 内容。它们通常使用前缀或后缀来表示特殊的加载语义。可以使用通配符模块声明来覆盖这些情况。
+
+```typescript
+declare module "*!text" {
+  const content: string;
+  export default content;
+}
+// Some do it the other way around.
+declare module "json!*" {
+  const value: any;
+  export default value;
+}
+```
+
+现在您可以导入匹配“ * ! text”或“ json! *”的内容。
+
+```typescript
+import fileContent from "./xyz.txt!text";
+import data from "json!http://example.com/data.json";
+console.log(data, fileContent);
+```
+
+#####  UMD 模块
+
+一些库被设计用于许多模块加载器，或者不用模块加载(全局变量)。这些被称为 UMD 模块。可以通过导入或全局变量访问这些库。例如:
+
+###### math-lib.d.ts
+
+```typescript
+export function isPrime(x: number): boolean;
+export as namespace mathLib;
+```
+
+这个库可以用作模块中的导入:
+
+```typescript
+import { isPrime } from "math-lib";
+isPrime(2);
+mathLib.isPrime(2); // ERROR: can't use the global definition from inside a module:
+```
+
+它也可以作为全局变量使用，但只能在脚本内部使用。(脚本是没有导入或导出的文件。)
+
+```typescript
+mathLib.isPrime(2);
+```
+
+### 创建模块结构指导
+
+#### 1.尽可能地在顶层导出
+
+用户应该更容易地使用你模块导出的内容。 嵌套层次过多会变得难以处理，因此仔细考虑一下如何组织你的代码。
+
+从你的模块中导出一个命名空间就是一个增加嵌套的例子。 虽然命名空间有时候有它们的用处，在使用模块的时候它们额外地增加了一层。 这对用户来说是很不便的并且通常是多余的。
+
+导出类的静态方法也有同样的问题 - 这个类本身就增加了一层嵌套。 除非它能方便表述或便于清晰使用，否则请考虑直接导出一个辅助方法。
+
+#### 2.如果仅导出单个 `class` 或 `function`，使用 `export default`
+
+就像“在顶层上导出”帮助减少用户使用的难度，一个默认的导出也能起到这个效果。 如果一个模块就是为了导出特定的内容，那么你应该考虑使用一个默认导出。 这会令模块的导入和使用变得些许简单。 比如：
+
+##### MyClass.ts
+
+```typescript
+export default class SomeType {
+  constructor() { ... }
+}
+```
+
+##### MyFunc.ts
+
+```typescript
+export default function getThing() {
+  return "thing";
+}
+```
+
+##### Consumer.ts
+
+```typescript
+import t from "./MyClass";
+import f from "./MyFunc";
+let x = new t();
+console.log(f());
+```
+
+对用户来说这是最理想的。他们可以随意命名导入模块的类型（本例为`t`）并且不需要多余的时间来找到相关对象。
+
+#### 3.如果要导出多个对象，请将它们全部放在顶级
+
+##### MyThings.ts
+
+```typescript
+export class SomeType {
+  /* ... */
+}
+export function someFunc() {
+  /* ... */
+}
+```
+
+相反，导入时：
+
+#### 4.显式列出导入的名称
+
+##### Consumer.ts
+
+```typescript
+import { SomeType, someFunc } from "./MyThings";
+let x = new SomeType();
+let y = someFunc();
+```
+
+#### 5.如果要导入大量内容，请使用命名空间导入模式
+
+##### MyLargeModule.ts
+
+```typescript
+export class Dog { ... }
+export class Cat { ... }
+export class Tree { ... }
+export class Flower { ... }
+```
+
+##### Consumer.ts
+
+```typescript
+import * as myLargeModule from "./MyLargeModule.ts";
+let x = new myLargeModule.Dog();
+```
+
+### 使用再导出进行扩展
+
+你可能经常需要去扩展一个模块的功能。 JS里常用的一个模式是JQuery那样去扩展原对象。 如我们之前提到的，模块不会像全局命名空间对象那样去 *合并*。 推荐的方案是 *不要*去改变原来的对象，而是导出一个新的实体来提供新的功能。
+
+假设`Calculator.ts`模块里定义了一个简单的计算器实现。 这个模块同样提供了一个辅助函数来测试计算器的功能，通过传入一系列输入的字符串并在最后给出结果。
+
+#### Calculator.ts
+
+```typescript
+export class Calculator {
+  private current = 0;
+  private memory = 0;
+  private operator: string;
+  protected processDigit(digit: string, currentValue: number) {
+    if (digit >= "0" && digit <= "9") {
+      return currentValue * 10 + (digit.charCodeAt(0) - "0".charCodeAt(0));
+    }
+  }
+  protected processOperator(operator: string) {
+    if (["+", "-", "*", "/"].indexOf(operator) >= 0) {
+      return operator;
+    }
+  }
+  protected evaluateOperator(
+    operator: string,
+    left: number,
+    right: number
+  ): number {
+    switch (this.operator) {
+      case "+":
+        return left + right;
+      case "-":
+        return left - right;
+      case "*":
+        return left * right;
+      case "/":
+        return left / right;
+    }
+  }
+  private evaluate() {
+    if (this.operator) {
+      this.memory = this.evaluateOperator(
+        this.operator,
+        this.memory,
+        this.current
+      );
+    } else {
+      this.memory = this.current;
+    }
+    this.current = 0;
+  }
+  public handleChar(char: string) {
+    if (char === "=") {
+      this.evaluate();
+      return;
+    } else {
+      let value = this.processDigit(char, this.current);
+      if (value !== undefined) {
+        this.current = value;
+        return;
+      } else {
+        let value = this.processOperator(char);
+        if (value !== undefined) {
+          this.evaluate();
+          this.operator = value;
+          return;
+        }
+      }
+    }
+    throw new Error(`Unsupported input: '${char}'`);
+  }
+  public getResult() {
+    return this.memory;
+  }
+}
+export function test(c: Calculator, input: string) {
+  for (let i = 0; i < input.length; i++) {
+    c.handleChar(input[i]);
+  }
+  console.log(`result of '${input}' is '${c.getResult()}'`);
+}
+```
+
+下面使用导出的`test`函数来测试计算器。
+
+#### TestCalculator.ts
+
+```typescript
+import { Calculator, test } from "./Calculator";
+let c = new Calculator();
+test(c, "1+2*33/11="); // prints 9
+```
+
+现在扩展它，添加支持输入其它进制（十进制以外），让我们来创建`ProgrammerCalculator.ts`。
+
+#### ProgrammerCalculator.ts
+
+```typescript
+import { Calculator } from "./Calculator";
+class ProgrammerCalculator extends Calculator {
+  static digits = [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+  ];
+  constructor(public base: number) {
+    super();
+    const maxBase = ProgrammerCalculator.digits.length;
+    if (base <= 0 || base > maxBase) {
+      throw new Error(`base has to be within 0 to ${maxBase} inclusive.`);
+    }
+  }
+  protected processDigit(digit: string, currentValue: number) {
+    if (ProgrammerCalculator.digits.indexOf(digit) >= 0) {
+      return (
+        currentValue * this.base + ProgrammerCalculator.digits.indexOf(digit)
+      );
+    }
+  }
+}
+// Export the new extended calculator as Calculator
+export { ProgrammerCalculator as Calculator };
+// Also, export the helper function
+export { test } from "./Calculator";
+```
+
+新的`ProgrammerCalculator`模块导出的API与原先的`Calculator`模块很相似，但却没有改变原模块里的对象。 下面是测试ProgrammerCalculator类的代码：
+
+#### TestProgrammerCalculator.ts
+
+```typescript
+import { Calculator, test } from "./ProgrammerCalculator";
+let c = new Calculator(2);
+test(c, "001+010="); // prints 3
+```
+
+### 不要在模块中使用命名空间
+
+当初次进入基于模块的开发模式时，可能总会控制不住要将导出包裹在一个命名空间里。 模块具有其自己的作用域，并且只有导出的声明才会在模块外部可见。 记住这点，命名空间在使用模块时几乎没什么价值。
+
+在组织方面，命名空间对于在全局作用域内对逻辑上相关的对象和类型进行分组是很便利的。 例如，在C#里，你会从 `System.Collections`里找到所有集合的类型。 通过将类型有层次地组织在命名空间里，可以方便用户找到与使用那些类型。 然而，模块本身已经存在于文件系统之中，这是必须的。 我们必须通过路径和文件名找到它们，这已经提供了一种逻辑上的组织形式。 我们可以创建 `/collections/generic/`文件夹，把相应模块放在这里面。
+
+命名空间对解决全局作用域里命名冲突来说是很重要的。 比如，你可以有一个 `My.Application.Customer.AddForm`和`My.Application.Order.AddForm` -- 两个类型的名字相同，但命名空间不同。 然而，这对于模块来说却不是一个问题。 在一个模块里，没有理由两个对象拥有同一个名字。 从模块的使用角度来说，使用者会挑出他们用来引用模块的名字，所以也没有理由发生重名的情况。
+
+> 有关模块和命名空间的详细讨论，请参阅 [命名空间和模块](https://www.typescriptlang.org/docs/handbook/namespaces-and-modules.html)。
+
+### 危险信号
+
+以下均为模块结构上的危险信号。重新检查以确保你没有在对模块使用命名空间，如果这些适用于你的文件：
+
+- 文件的顶层声明是`export namespace Foo { ... }` （删除`Foo`并把所有内容向上层移动一层）
+- 多个文件的顶层具有同样的`export namespace Foo {` （不要以为这些会合并到一个`Foo`中！）
+
+## 模块解析
+
+> 本节假设您对模块有一些基本的了解。有关更多信息，请参阅模块文档。
+
+模块解析是编译器用来确定导入指向的过程。考虑一个 import 语句，比如 import { a } from“ moduleA”; 为了检查 a 的任何用法，编译器需要准确地知道它代表什么，并且需要检查它的定义 moduleA。
+
+这时，编译器会问“ moduleA 的形状是什么?”虽然这听起来很简单，但 moduleA 可以在您自己的.ts/.tsx文件中定义，或在一个你的代码所依赖的 .d.ts文件中定义。
+
+首先，编译器将尝试定位表示导入模块的文件。为此，编译器遵循两种不同的策略之一: 经典策略或节点策略。这些策略告诉编译器在哪里寻找 moduleA。
+
+如果这不起作用，而且如果模块名称是非相对的(在“ moduleA”的情况下是非相对的) ，那么编译器将尝试定位一个外部模块声明。接下来我们将讨论非相对导入。
+
+最后，如果编译器不能解析模块，它将记录一个错误。在这种情况下，错误类似于 error TS2307: Can not find module‘ moduleA’。
+
+### 相对与非相对模块导入
+
+根据模块引用是相对的还是非相对的，对模块导入进行不同的解析。
+
+相对导入是以/、 ./或. ./开头的导入。一些例子包括:
+
+- `import Entry from "./components/Entry";`
+- `import { DefaultHeaders } from "../constants/http";`
+- `import "/mod";`
+
+任何其他导入均被视为非相对导入，例如:
+
+- `import * as $ from "jquery";`
+- `import { Component } from "@angular/core";`
+
+相对导入是相对于导入文件解析的，不能解析为外部模块声明。您应该为您自己的模块使用相对导入，这些模块保证在运行时维护它们的相对位置。
+
+非相对导入可以相对于 baseUrl 解析，也可以通过路径映射解析，我们将在下面讨论。它们还可以解析为外部模块声明。在导入任何外部依赖项时使用非相对路径。
+
+### 模块解析策略
+
+有两种可能的模块解析策略: Node 和 Classic。您可以使用 -- moduleResolution 标志来指定模块解析策略。如果没有指定，则默认为 Node 针对 -- module commonjs，否则为 Classic (包括当 -- module 被设置为 amd、 system、 umd、 es2015、 esnext 等时)。
+
+> 注意: 节点模块解析是 TypeScript 社区中最常用的方法，对于大多数项目都推荐使用。如果在输入和输出ts时遇到解决方案问题，请尝试设置 moduleResolution: “ node”，以查看它是否修复了问题。
+
+#### Classic经典
+
+这曾经是ts的默认解析策略，现在这种策略主要用于向下兼容。
+
+相对导入将相对于导入文件进行解析。因此在源文件`/root/src/folder/A.ts`中的`import {b} from "./moduleB"`会导致下面的查找：
+
+1. `/root/src/folder/moduleB.ts`
+2. `/root/src/folder/moduleB.d.ts`
+
+然而、针对非相对模块导入，编译器从包含导入文件的目录开始查找目录树，尝试定位一个匹配的目标文件。
+
+例如：
+
+在源文件`/root/src/folder/A.ts`中, `moduleB`的一个非相对导入，例如`import {b} from "moduleB"`,将会导致针对`"moduleB"`的如下的定位查找：
+
+1.`/root/src/folder/moduleB.ts`
+
+2.`/root/src/folder/moduleB.d.ts`
+
+3.`/root/src/moduleB.ts`
+
+4.`/root/src/moduleB.d.ts`
+
+5.`/root/moduleB.ts`
+
+6.`/root/moduleB.d.ts`
+
+7.`/moduleB.ts`
+
+8.`/moduleB.d.ts`
+
+#### Node节点 
+
+这个解析策略尝试模仿Node.js在运行时的模块解析机制。完整的Node.js解析算法在Node.js模块说明文档里有略述。
+
+##### Node.js怎么解析模块
+
+要理解Typescript遵循的步骤，阐明Node.js模块中的亮点是很重要的。传统上，Node.js的导入是通过调用一个名为require的函数被执行的。Node.js采取的行为是依赖require函数接收的是相对路径还是非相对路径而不同的。
+
+相对路径是非常简单的。作为一个例子，让我们考虑一个文件：`/root/src/moduleA.js`,它包含导入`var x = require("./moduleB")`;Node.js按照下面的顺序解析这个导入:
+
+1. 询问名为`/root/src/moduleB.js`的文件，如果它存在。
+2. 询问文件夹`/root/src/moduleB`,如果它包含一个名为package.json的文件，它指定了"main"模块。在我们的例子里，如果Node.js发现文件`/root/src/moduleB/package.json`包含`{“main":"lib/mainModule.js"}`,Node.js将会指向`/root/src/moduleB/lib/mainModule.js`。
+3. 询问文件夹`/root/src/moduleB`,如果它包含一个名为index.js的文件。这个文件隐式地被认为是那个文件夹的"main"模块。
+
+你可以在node.js文档里阅读更多关于文件模块和文件夹模块的信息。
+
+然而，一个非相对模块名的解析有所不同。Node将在一个名为node_modules的特殊文件夹里查找你的模块，一个node_modules文件夹可能是在和你当前文件相同的层级，或者在目录链的更高层。Node将遍历这个目录链，浏览每个node_modules直到它发现了你要加载的模块。
+
+跟进上面的例子，考虑如果`/root/src/moduleA.js`使用非相对路径并且有个导入语句`var = require("moduleB");`。然后Node尝试解析`moduleB`，针对每个位置直到有一个起作用。
+
+1. `/root/src/node_modules/moduleB.js`
+
+2. `/root/src/node_modules/moduleB/package.json` (如果它指定了 `"main"` 属性)
+
+3. `/root/src/node_modules/moduleB/index.js`
+
+   
+
+4. `/root/node_modules/moduleB.js`
+
+5. `/root/node_modules/moduleB/package.json` (如果它指定了 `"main"` 属性)
+
+6. `/root/node_modules/moduleB/index.js`
+
+   
+
+7. `/node_modules/moduleB.js`
+
+8. `/node_modules/moduleB/package.json` (如果它指定了 `"main"` 属性)
+
+9. `/node_modules/moduleB/index.js`
+
+注意，Node.js 在步骤(4)和(7)中跳出了一个目录。
+
+你可以在node.js文档里阅读关于从node_modules加载模块的更多过程。
+
+##### TypeScript怎样解析模块
+
+为了查找模块在编译时的目标文件，TypeScript将模仿Node.js运行时解析策略。为了完成这个目标，TypeScript将TypeScript源文件扩展名（.ts,tsx,和.d.ts）覆盖Node的解析逻辑。TypeScript也将在package.json里用一个名为”types“的字段去映射”main“的用途-编译器将使用它来查找”main“定义文件。
+
+例如，在/root/src/moduleA.ts文件里一个像import {b} from "./moduleB"的导入语句，将导致为了搜索”./moduleB"尝试如下的搜索结果：
+
+1. `/root/src/moduleB.ts`
+2. `/root/src/moduleB.tsx`
+3. `/root/src/moduleB.d.ts`
+4. `/root/src/moduleB/package.json` (如果它指定了一个"types"` 属性)
+5. `/root/src/moduleB/index.ts`
+6. `/root/src/moduleB/index.tsx`
+7. `/root/src/moduleB/index.d.ts`
+
+回想node.js查找一个名为moduleB.js的文件，然后是一个适用的package.json,然后是一个index.js。
+
+相似的，一个非相对导入将遵循Node.js解析逻辑，首先 查找一个文件，然后查找一个适用的文件夹。因此import {b} from “moduleB”在源文件/root/src/moduleA.ts中，将导致下面的搜索结果：
+
+1. /root/src/node_modules/moduleB.ts
+2. /root/src/node_modules/moduleB.tsx
+3. /root/src/node_modules/moduleB.d.ts
+4. /root/src/node_modules/moduleB/package.json(如果它指定“types”属性)
+5. /root/src/node_modules/@types/moduleB.d.ts
+6. /root/src/node_modules/moduleB/index.ts
+7. /root/src/node_modules/moduleB/index.tsx
+8. /root/src/node_modules/moduleB/index.d.ts
 
 
 
+9. /root/node_modules/moduleB.ts
+10. /root/node_modules/moduleB.tsx
+11. /root/node_modules/moduleB.d.ts
+12. /root/node_modules/moduleB/package.json(如果它指定“types”属性)
+13. /root/node_modules/@types/moduleB.d.ts
+14. /root/node_modules/moduleB/index.ts
+15. /root/node_modules/moduleB/index.tsx
+16. /root/node_modules/moduleB/index.d.ts
+
+
+
+17. /node_modules/moduleB.ts
+18. /node_modules/moduleB.tsx
+19. /node_modules/moduleB.d.ts
+20. /node_modules/moduleB/package.json(如果它指定“types”属性)
+21. /node_modules/@types/moduleB.d.ts
+22. /node_modules/moduleB/index.ts
+23. /node_modules/moduleB/index.tsx
+24. /node_modules/moduleB/index.d.ts
+
+不要被这么多步骤吓住---TypeScript依然只在步骤（9）和步骤（17）中跳转目录两次。这实际上不比Node.js更复杂。
+
+### 额外模块解析标识
+
+项目原布局有时候和输出布局不匹配。通常一组构建步骤会导致最终输出。这些包括编译.ts文件成.js，并且从不同源地址拷贝依赖到一个单一输出地址。最终的结果是，运行时的模块可能与包含特们定义的源文件有不同的名称。或者最终输出的模块路径可能不匹配编译时的源文件路径。
+
+TypeScript编译器有一组额外的标识，用于向编译器通报预期将发生在源上的生成最终输出的转换。
+
+需要注意的是，编译器不会执行任何这些转换。它只是使用这些信息来指导将模块导入解析到其定义文件的过程。
+
+#### Base URL基本网址
+
+使用baseUrl是在使用AMD模块加载器的应用程序里一个通用的操作，在这些加载器里模块在运行时被“部署”到一个文件夹里。这些模块的源可以存在不同的文件夹里，但是一个构建脚本会把他们放到一起。
+
+设置baseUrl通知编译器去哪里查找模块。所有带非相对名称的模块导入假定是相对baseUrl的。
+
+baseUrl的值确定为下面之一：
+
+* baseUrl命令行参数的值（如果给定路径是相对的，它是依据当前目录计算的）。
+* 在‘tsconfig.json’文件中baseUrl属性的值（如果给定路径是相对的，它是依据‘tsconfig.json’的定位计算的）。
+
+注意，相对模块导入不受设置baseUrl的影响。因为他们总是相对于他们的导入文件被解析。
+
+你可以在RequireJS和SystemJS文档里找到更多关于baseUrl的文档。
+
+#### 路径映射
+
+有时候模块不会直接依据baseUrl定位。例如，一个“jquery”模块的导入将会在运行时被翻译成`“node_modules/jquery/dist/jquery.slim.min.js”`。加载器在运行时使用一个映射配置去映射模块名到文件。具体看RequireJs文档和SystemJS文档。
+
+TypeScript编译器支持在tsconfig.json文件里使用“paths“属性这样的映射声明。这里有一个关于怎样指定jquery的”paths“属性的例子。
+
+```json
+{
+    "compilerOptions": {
+        "baseUrl": ".", // 如果paths被指定，这个必须被指定
+        "path": {
+            "jquery": ["node_modules/jquery/dist/jquery"] // 这个映射是相对baseUrl的
+        }
+    }
+}
+```
+
+请注意“paths”相对于“baseUrl”被解析。例如，当设置“baseUrl”为另一个值而不是“."（tsconfig.json的目录）时，映射必须相应地被改变。假如，你在上面地例子中设置"baseUrl": "./src"，然后jquery将被映射到"../node_modules/jquery/dist/jquery"。
+
+使用”paths“也允许更复杂的映射，包括多个后退地点。考虑一个项目配置，其中一个位置只有一些模块可用，其余模块在另一个位置。一个构建步骤将他们放在同一个地方。项目布局可能看上去像：
+
+```typescript
+projectRoot
+├── folder1
+│   ├── file1.ts (imports 'folder1/file2' and 'folder2/file3')
+│   └── file2.ts
+├── generated
+│   ├── folder1
+│   └── folder2
+│       └── file3.ts
+└── tsconfig.json
+```
+
+相应的tsconfig.json将会看上去像：
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "*": ["*", "generated/*"]
+    }
+  }
+}
+```
+
+这告诉编译器任何与模式“*”（即所有值）匹配的模块导入，在两个位置进行查找：
+
+1. "*":表示名字不发生改变，所以映射为<moduleName> => <baseUrl>/<moduleName>
+2. "generated/*"表示模块名添加了“generated”前缀，所以映射为<moduleName> => <baseUrl>/generated/<moduleName>
+
+按照这个逻辑，编译器将尝试像这样解析这两个导入：
+
+import 'folder1/file2':
+
+1. 模式‘*’被匹配并且通配符捕获到整个模块名称。
+2. 尝试列表里的第一个替换：‘*’ -> `folder1/file2`
+3. 替换的结果是非相对名 - 与baseUrl合并 -> `projectRoot/folder1/file2.ts`.
+4. 文件存在，结束。
+
+import 'folder2/file3':
+
+1. 模式‘*’被匹配并且通配符捕捉到整个模块名
+2. 尝试列表里的第一个替换：‘*’ -> `folder2/file3`
+3. 替换的结果是非相对名 - 与baseUrl合并 -> `projectRoot/folder2/file3.ts`.
+4. 文件不存在，移动到第二个替换。
+5. 第二个替换'generated/*' -> `generated/folder2/file3`
+6. 替换的结果是非相对名 - 与baseUrl合并 -> `projectRoot/generated/folder2/file3.ts`.
+7. 文件存在，结束。
+
+#### 利用`rootDirs`指定虚拟目录
+
+有时候在编译时来自多目录的项目源全部组合在一起去生成一个单一的输出目录。这个可以被看到，以一组源目录创建一个“虚拟”目录的形式。
+
+使用‘rootDirs’，可以告诉编译器生成这个虚拟目录的*roots* , 然后编译器可以在虚拟目录下解析相对模块导入，就好像他们被合并在了一起一样。
+
+例如,考虑这个项目结构：
+
+```typescript
+src
+ └── views
+     └── view1.ts (imports './template1')
+     └── view2.ts
+
+ generated
+ └── templates
+         └── views
+             └── template1.ts (imports './view2')
+
+```
+
+在src/views文件夹里的文件是针对一些ui控制器的用户代码。genetated/templates里的文件是ui模板，他绑定由作为构建的一部分的一个模板生成器自动生成的代码。一个构建步骤会拷贝/src/views和/generated/templates/views里的文件到输出的相同目录里。在运行时，一个视图可以假定他的模板和他在同一个目录下，因此应该使用"./template"的相对名称导入他。
+
+为了向编译器指定这个关系，使用“rootDirs"。”rootDirs“指定了一个roots的列表，他的内容会在运行时合并。因此，针对这个例子，tscconfig.json文件应该看上去像：
+
+```json
+{
+    "compilerOptions": {
+        "rootDirs": ["src/views", "generated/templates/views"]
+    }
+}
+```
+
+每次编译器在rootDirs其中之一的一个子文件夹里看到一个相对模块导入，他将会尝试在rootDirs的每个条目里查找这个导入
+
+`rootDirs`的灵活性不限于指定逻辑合并的物理源目录列表。所提供的数组可以包含任意数量的特定、任意目录名，不管他们存在与否。这允许编译器以类型安全的方式捕获复杂的捆绑和运行时特性，如条件包含和项目特定的加载器插件。
+
+考虑一个国际化场景，其中构建工具通过插入一个特殊路径令牌(比如 `# { locale }`)自动生成特定于区域设置的包，作为相对模块路径的一部分，比如`./#{locale}/messages`。在这个假设的设置中，工具枚举了受支持的区域设置，将抽象的路径映射为./zh/messages、./de/messages等等。
+
+假设每个模块导出字符串数组。例如`./zh/messages`可能包含：
+
+```typescript
+export default ["您好吗","很高兴认识你"];
+```
+
+通过利用 rootDirs，我们可以通知编译器此映射，从而允许它安全地解析`./#{locale}/messages`，即使目录永远不存在。例如，使用以下 tsconfig.json:
+
+```json
+{
+  "compilerOptions": {
+    "rootDirs": ["src/zh", "src/de", "src/#{locale}"]
+  }
+}
+```
+
+编译器现在可以将`import messages from './#{locale}/messages'`解析为`import messages from './zh/messages'`用做工具支持的目的，并允许在开发时不必了解区域信息。
+
+#### 跟踪模块解析
+
+如前所述，编译器在解析模块时可以访问当前文件夹之外的文件。在诊断为什么模块没有解析，或者解析为不正确的定义时，这可能很困难。使用 `-- traceResolution` 启用编译器模块解析跟踪提供了对模块解析过程中发生的事情的了解。
+
+假设我们有一个使用`typescript`模块的示例应用程序。`App.ts` 有一个类似`import * as ts from "typescript"`的导入。
+
+```typescript
+│   tsconfig.json
+├───node_modules
+│   └───typescript
+│       └───lib
+│               typescript.d.ts
+└───src
+        app.ts
+```
+
+使用 -- traceResolution 调用编译器
+
+```shell
+tsc --traceResolution
+```
+
+输出的结果，例如:
+
+```shell
+======== Resolving module 'typescript' from 'src/app.ts'. ========
+Module resolution kind is not specified, using 'NodeJs'.
+Loading module 'typescript' from 'node_modules' folder.
+File 'src/node_modules/typescript.ts' does not exist.
+File 'src/node_modules/typescript.tsx' does not exist.
+File 'src/node_modules/typescript.d.ts' does not exist.
+File 'src/node_modules/typescript/package.json' does not exist.
+File 'node_modules/typescript.ts' does not exist.
+File 'node_modules/typescript.tsx' does not exist.
+File 'node_modules/typescript.d.ts' does not exist.
+Found 'package.json' at 'node_modules/typescript/package.json'.
+'package.json' has 'types' field './lib/typescript.d.ts' that references 'node_modules/typescript/lib/typescript.d.ts'.
+File 'node_modules/typescript/lib/typescript.d.ts' exist - use it as a module resolution result.
+======== Module name 'typescript' was successfully resolved to 'node_modules/typescript/lib/typescript.d.ts'. ========
+```
+
+#####  需要注意的事情
+
+* 导入的名称和位置
+
+  ```typescript
+  = = = = = = = 解析‘ src/app.ts’中的‘ typescript’模块
+  ```
+
+* 编译器遵循的策略
+
+  ```typescript
+  没有指定使用“ node.js”的模块解析类型。
+  ```
+
+* 从 npm 包导入类型
+
+  ```typescript
+  'package.json'有'types'字段'./lib/typescript.d.ts'，引用'node _ modules/typescript/lib/typescript.d.ts'。
+  ```
+
+* 最终结果
+
+  ```typescript
+  = = = = = = = = 模块名称'typescript'被成功地解析为'node _ modules/typescript/lib/typescript.d.ts'
+  ```
+
+#### 使用`--noResolve`
+
+通常，编译器会在开始编译过程之前尝试解析所有模块导入。每次成功地将导入解析为一个文件时，该文件都会添加到编译器稍后将处理的一组文件中。
+
+noResolve 编译器选项指示编译器不要将任何未在命令行上传递的文件“添加”到编译中。它仍将尝试将模块解析为文件，但如果未指定该文件，则不会包含该文件。
+
+例如:
+
+##### app.ts
+
+```typescript
+import * as A from "moduleA"; // OK, 'moduleA' passed on the command-line
+import * as B from "moduleB"; // Error TS2307: Cannot find module 'moduleB'.
+```
+
+```shell
+tsc app.ts moduleA.ts --noResolve
+```
+
+使用 `-- noResolve` 编译 `app.ts` 应该导致:
+
+* 正确地找到`moduleA`，当它在命令行上传递时
+* 找不到`moduleB` 的错误，因为它没有在命令行上被传递。
+
+### 常见问题
+
+#### 为什么排除列表中的模块仍然会被编译器拾取？
+
+`tsconfig.json`  把一个文件夹变成一个“项目”。在不指定任何“ `exclude`”或“ `files`”条目的情况下，包含 `tsconfig.json` 及其所有子目录的文件夹中的所有文件都包含在您的编译中。如果你想要排除一些文件使用“ `exclude`”，如果你想要指定所有的文件而不是让编译器查找它们，使用“ `files`”。
+
+这是 `tsconfig.json` 自动包含。这不会像上面讨论的那样嵌入模块解析。如果编译器将某个文件标识为模块导入的目标，则该文件将包含在编译中，而不管前面的步骤是否将其排除在外。
+
+因此，要从编译中排除一个文件，您需要排除它和所有具有`import`或`/// <reference path="..." />`指令的文件。
+
+## 命名空间
+
+> 关于术语的注意: 需要注意的是，在TypeScript1.5中，术语已经改变。“内部模块”现在是“命名空间”。“外部模块”现在只是“模块”，以便与 ECMAScript 2015的术语保持一致(即模块 x {相当于现在首选的命名空间 x {)。
+
+本文概述了使用 TypeScript 中的名称空间(以前称为“内部模块”)组织代码的各种方法。正如我们在关于术语的说明中所提到的，“内部模块”现在称为“名称空间”。此外，在声明内部模块时使用了 module 关键字的任何地方，都可以而且应该使用 namespace 关键字。这样可以通过使用类似的命名术语重载新用户来避免混淆他们。
+
+### 第一步
+
+让我们从这个程序开始，我们将在整个页面中使用它作为我们的例子。我们已经编写了一小组简单的字符串验证器，您可以编写它们来检查用户在网页表单上的输入，或者检查外部提供的数据文件的格式。
+
+#### 单个文件中的验证器
+
+```typescript
+interface StringValidator {
+  isAcceptable(s: string): boolean;
+}
+let lettersRegexp = /^[A-Za-z]+$/;
+let numberRegexp = /^[0-9]+$/;
+class LettersOnlyValidator implements StringValidator {
+  isAcceptable(s: string) {
+    return lettersRegexp.test(s);
+  }
+}
+class ZipCodeValidator implements StringValidator {
+  isAcceptable(s: string) {
+    return s.length === 5 && numberRegexp.test(s);
+  }
+}
+// Some samples to try
+let strings = ["Hello", "98052", "101"];
+// Validators to use
+let validators: { [s: string]: StringValidator } = {};
+validators["ZIP code"] = new ZipCodeValidator();
+validators["Letters only"] = new LettersOnlyValidator();
+// Show whether each string passed each validator
+for (let s of strings) {
+  for (let name in validators) {
+    let isMatch = validators[name].isAcceptable(s);
+    console.log(`'${s}' ${isMatch ? "matches" : "does not match"} '${name}'.`);
+  }
+}
+```
+
+###  命名空间
+
+当我们添加更多的验证器时，我们希望有某种组织方案，这样我们就可以跟踪我们的类型，而不用担心与其他对象的命名冲突。与其将许多不同的名称放入全局命名空间，不如将对象封装到一个命名 空间中。
+
+在本例中，我们将把所有与验证器相关的条目移动到名称空间 `Validation` 中。因为我们希望在命名空间之外可以看到这里的接口和类，所以我们在它们之前加上了`export`。相反，变量 lettersRegexp 和 numberRegexp 是实现细节，因此它们不会被导出，并且在名称空间之外的代码中不可见。在文件底部的测试代码中，我们现在需要限定在命名空间之外使用的类型的名称，例如 Validation。LettersOnlyValidator.
+
+### 命名空间验证器
+
+```typescript
+namespace Validation {
+  export interface StringValidator {
+    isAcceptable(s: string): boolean;
+  }
+  const lettersRegexp = /^[A-Za-z]+$/;
+  const numberRegexp = /^[0-9]+$/;
+  export class LettersOnlyValidator implements StringValidator {
+    isAcceptable(s: string) {
+      return lettersRegexp.test(s);
+    }
+  }
+  export class ZipCodeValidator implements StringValidator {
+    isAcceptable(s: string) {
+      return s.length === 5 && numberRegexp.test(s);
+    }
+  }
+}
+// Some samples to try
+let strings = ["Hello", "98052", "101"];
+// Validators to use
+let validators: { [s: string]: Validation.StringValidator } = {};
+validators["ZIP code"] = new Validation.ZipCodeValidator();
+validators["Letters only"] = new Validation.LettersOnlyValidator();
+// Show whether each string passed each validator
+for (let s of strings) {
+  for (let name in validators) {
+    console.log(
+      `"${s}" - ${
+        validators[name].isAcceptable(s) ? "matches" : "does not match"
+      } ${name}`
+    );
+  }
+}
+```
+
+### 分离到多文件
+
+随着应用程序的增长，我们希望将代码分割到多个文件中，以便更易于维护。
+
+#### 多文件名称空间
+
+在这里，我们将把 Validation 命名空间划分为许多文件。尽管这些文件是独立的，但它们可以对同一个命名空间做出贡献，并且可以被使用，就好像它们都在一个地方定义一样。因为文件之间存在依赖关系，所以我们将添加引用标记来告诉编译器文件之间的关系。除此之外，我们的测试代码没有变化。
+
+##### Validation.ts
+
+```typescript
+namespace Validation {
+  export interface StringValidator {
+    isAcceptable(s: string): boolean;
+  }
+}
+```
+
+##### LettersOnlyValidator.ts
+
+```typescript
+/// <reference path="Validation.ts" />
+namespace Validation {
+  const lettersRegexp = /^[A-Za-z]+$/;
+  export class LettersOnlyValidator implements StringValidator {
+    isAcceptable(s: string) {
+      return lettersRegexp.test(s);
+    }
+  }
+}
+```
+
+##### ZipCodeValidator.ts
+
+```typescript
+/// <reference path="Validation.ts" />
+namespace Validation {
+  const numberRegexp = /^[0-9]+$/;
+  export class ZipCodeValidator implements StringValidator {
+    isAcceptable(s: string) {
+      return s.length === 5 && numberRegexp.test(s);
+    }
+  }
+}
+```
+
+##### Test.ts
+
+```typescript
+/// <reference path="Validation.ts" />
+/// <reference path="LettersOnlyValidator.ts" />
+/// <reference path="ZipCodeValidator.ts" />
+
+// Some samples to try
+let strings = ["Hello", "98052", "101"];
+
+// Validators to use
+let validators: { [s: string]: Validation.StringValidator } = {};
+validators["ZIP code"] = new Validation.ZipCodeValidator();
+validators["Letters only"] = new Validation.LettersOnlyValidator();
+
+// Show whether each string passed each validator
+for (let s of strings) {
+  for (let name in validators) {
+    console.log(
+      `"${s}" - ${
+        validators[name].isAcceptable(s) ? "matches" : "does not match"
+      } ${name}`
+    );
+  }
+}
+```
+
+一旦涉及到多个文件，我们需要确保加载所有已编译的代码。有两种方法可以做到这一点。
+
+首先，我们可以使用`--outFile` 标志连接输出，将所有输入文件编译成一个 JavaScript 输出文件:
+
+```shell
+tsc --outFile sample.js Test.ts
+```
+
+编译器将根据文件中的引用标记自动对输出文件进行排序。您还可以单独指定每个文件:
+
+```typescript
+tsc --outFile sample.js Validation.ts LettersOnlyValidator.ts ZipCodeValidator.ts Test.ts
+```
+
+第二种方式，我们可以编译每一个文件（默认方式），那么每个源文件都会对应生成一个JavaScript文件。 然后，在页面上通过 `<script>`标签把所有生成的JavaScript文件按正确的顺序引进来，比如：
+
+##### MyTestPage.html (excerpt)
+
+```html
+<script src="Validation.js" type="text/javascript" />
+<script src="LettersOnlyValidator.js" type="text/javascript" />
+<script src="ZipCodeValidator.js" type="text/javascript" />
+<script src="Test.js" type="text/javascript" />
+```
+
+### 别名
+
+另一种简化命名空间的方法是使用 `import q = x.y.z` 为常用对象创建更短的名称。不要与用于加载模块的 `import x = require (“ name”)`语法混淆，这种语法只是为指定的符号创建一个别名。您可以对任何类型的标识符使用这些类型的导入(通常称为别名) ，包括从模块导入创建的对象。
+
+```typescript
+namespace Shapes {
+  export namespace Polygons {
+    export class Triangle {}
+    export class Square {}
+  }
+}
+import polygons = Shapes.Polygons;
+let sq = new polygons.Square(); // Same as 'new Shapes.Polygons.Square()'
+```
+
+请注意，我们没有使用 require 关键字，而是直接从要导入的符号的限定名中赋值。这类似于使用 var，但也适用于导入符号的类型和名称空间含义。重要的是，对于值，import 是一个与原始符号不同的引用，因此对有别名的 var 的更改不会反映在原始变量中。
+
+### 使用其他 JavaScript 库
+
+为了描述非用JavaScript编写的库的形状，我们需要声明该库公开的 API。由于大多数 JavaScript 库只公开少数顶级对象，因此命名空间是表示它们的好方法。
+
+我们将不定义实现的声明称为“外部”。它们通常定义在`.d.ts`文件。如果您熟悉 c/c + + ，可以将它们看作.h文件。让我们来看几个例子。
+
+#### 外部命名空间
+
+流行的库 D3在一个名为 `d3`的全局对象中定义了它的功能。因为这个库是通过 `<script>` 标记加载的(而不是模块加载器) ，所以它的声明使用名称空间来定义它的形状。为了让 TypeScript 编译器看到这个形状，我们使用外部命名空间声明。例如，我们可以这样开始写:
+
+##### D3.d.ts (simplified excerpt)
+
+```typescript
+declare namespace D3 {
+  export interface Selectors {
+    select: {
+      (selector: string): Selection;
+      (element: EventTarget): Selection;
+    };
+  }
+  export interface Event {
+    x: number;
+    y: number;
+  }
+  export interface Base extends Selectors {
+    event: Event;
+  }
+}
+declare var d3: D3.Base;
+```
+
+## 命名空间和模块
+
+本文概述了使用TypeScript中的模块和名称空间组织代码的各种方法。我们还将介绍一些关于如何使用命名空间和模块的高级主题，并解决在TypeScript中使用命名空间和模块时的一些常见缺陷。
+
+有关 ES 模块的详细信息，请参阅模块文档。有关TypeScript命名空间的详细信息，请参阅命名空间文档。
+
+注意: 在很老的 TypeScript 命名空间版本中，这些早期的 JavaScript 模块系统被称为“内部模块”。
+
+### 使用模块
+
+模块可以同时包含代码和声明。
+
+模块还对模块加载程序(如 CommonJs/Require.js)或支持 ES 模块的运行时具有依赖性。模块为捆绑提供了更好的代码重用、更强的隔离和更好的工具支持。
+
+值得注意的是，对于 Node.js 应用程序，模块是默认的，**我们推荐使用现代代码中的模块而不是名称空间**。
+
+从 ECMAScript 2015开始，模块是语言的本机部分，应该得到所有兼容引擎实现的支持。因此，对于新的项目模块将是推荐的代码组织机制。
+
+### 使用命名空间
+
+命名空间是一种特定于TypeScript的代码组织方式。
+
+命名空间只是全局命名空间中的 JavaScript 对象。这使得命名空间成为一个非常简单的构造。与模块不同，它们可以跨多个文件，并且可以使用 `--outFile` 连接。名称空间是在 Web 应用程序中构造代码的好方法，在 HTML 页面中将所有依赖项都包含为 `<script>` 标记。
+
+就像所有的全局命名空间污染一样，很难识别组件依赖关系，特别是在大型应用程序中。
+
+### 命名空间和模块的缺陷
+
+在本节中，我们将描述使用名称空间和模块时的各种常见缺陷，以及如何避免它们。
+
+#### `/// <reference>`-ing a module
+
+一个常见的错误是尝试使用`/// <reference ... />` 语法来引用模块文件，而不是使用`import`语句。为了理解这个区别，我们首先需要理解编译器怎样根据导入路径（例如 `import x from "...";`, `import x = require("...");`, 等等的`...`。）定位一个模块的类型信息。
+
+编译器将选择合适的路径尝试找到`.ts`，`.tsx`，然后是`.d.ts`。如果找不到指定的文件，编译器将查找外部模块声明。回想一下，这些需要在`.d.ts`文件被声明。
+
+- `myModules.d.ts`
+
+  ```typescript
+  // In a .d.ts file or .ts file that is not a module:
+  declare module "SomeModule" {
+  export function fn(): string;
+  }
+  ```
+
+- `myOtherModule.ts`
+
+  我的另一个模型
+
+  ```typescript
+  /// <reference path="myModules.d.ts" />
+  import * as m from "SomeModule";
+  ```
+
+这里的 reference 标记允许我们定位包含环境模块声明的声明文件。这就是几个TypeScript样本所使用的 node.d.ts 文件被使用的方式。
+
+#### 不必要的命名空间
+
+如果你要把一个程序从命名空间转换成模块，很容易就会得到这样一个文件:
+
+- `shapes.ts`
+
+  ```typescript
+  export namespace Shapes {
+      export class Triangle {
+        /* ... */
+      }
+      export class Square {
+        /* ... */
+      }
+  }
+  ```
+
+顶层模块“`Shapes`”在这里毫无理由地包装`Triangle`和`Square`。这让模块的使用者感到困惑和恼火:
+
+- `shapeConsumer.ts`
+
+  ```typescript
+  import * as shapes from "./shapes";
+  let t = new shapes.Shapes.Triangle(); // shapes.Shapes?
+  ```
+
+TypeScript中模块的一个关键特性是，两个不同的模块永远不会将名称贡献给同一个范围。因为模块的使用者决定分配它的名称，所以不需要主动将导出的符号包装在命名空间中。
+
+为了重申为什么不应该尝试对模块内容命名，命名空间的一般思想是提供结构的逻辑分组，并防止名称冲突。因为模块文件本身已经是一个逻辑分组，其顶级名称由导入它的代码定义，所以不必为导出的对象使用额外的模块层。
+
+下面是一个修改过的例子:
+
+- `shapes.ts`
+
+  ```typescript
+  export class Triangle {
+  /* ... */
+  }
+  export class Square {
+  /* ... */
+  }
+  ```
+
+- `shapeConsumer.ts
+
+  ```typescript
+  import * as shapes from "./shapes";
+  let t = new shapes.Triangle();
+  ```
+
+### 模块的权衡
+
+正如 JS 文件和模块之间有一个一对一对应，TypeScript 在模块源文件和它们生成的 JS 文件之间有一个一对一对应。这样做的一个后果是，不可能根据目标模块系统连接多个模块源文件。例如，你不能在目标为 commonjs 或 umd 时使用 outFile 选项，但是在 TypeScript 1.8或更高版本中，可以在目标为 amd 或system时使用 outFile。
+
+## 符号
+
+从 ECMAScript 2015开始，symbol 是一种基本的数据类型，就像 number 和 string 一样。
+
+通过调用 Symbol 构造函数创建Symbol值。
+
+```typescript
+let sym1 = Symbol();
+let sym2 = Symbol("key"); // optional string key
+```
+
+符号是不可变的，而且是独一无二的。
+
+```typescript
+let sym2 = Symbol("key");
+let sym3 = Symbol("key");
+sym2 === sym3; // false, symbols are unique
+```
+
+就像字符串一样，符号也可以用作对象属性的键。
+
+```typescript
+const sym = Symbol();
+let obj = {
+  [sym]: "value",
+};
+console.log(obj[sym]); // "value"
+```
+
+还可以将符号与计算属性声明结合起来，以声明对象属性和类成员。
+
+```typescript
+const getClassNameSymbol = Symbol();
+class C {
+  [getClassNameSymbol]() {
+    return "C";
+  }
+}
+let c = new C();
+let className = c[getClassNameSymbol](); // "C"
+```
+
+### 著名的符号
+
+除了用户自定义的符号，还有一些众所周知的内置符号。内置符号用于表示内部语言行为。
+
+以下是一些著名的符号:
+
+#### `Symbol.hasInstance`
+
+确定构造函数对象是否将对象识别为构造函数的实例之一的方法。由 instanceof 运算符的语义调用。
+
+#### `Symbol.isConcatSpreadable`
+
+一个布尔值，指示对象应该通过 Array.prototype.concat 被展平为其数组元素。
+
+#### `Symbol.iterator`
+
+返回对象的默认迭代器的方法。由 for-of 语句的语义调用。
+
+#### `Symbol.match`
+
+匹配正则表达式与字符串的正则表达式方法，由 String.prototype.match 方法调用。
+
+#### `Symbol.replace`
+
+替换字符串中匹配子字符串的正则表达式方法。由 String.prototype.replace 方法调用。
+
+#### `Symbol.search`
+
+返回与正则表达式匹配的字符串中的索引的正则表达式方法。由 String.prototype.search 方法调用。
+
+#### `Symbol.species`
+
+函数值属性，是用于创建派生对象的构造函数。
+
+#### `Symbol.split`
+
+在与正则表达式匹配的索引处拆分字符串的正则表达式方法。由 String.prototype.split 方法调用。
+
+#### `Symbol.toPrimitive`
+
+一种将对象转换为相应的基元值的方法。由 ToPrimitive 抽象操作调用。
+
+#### `Symbol.toStringTag`
+
+用于创建对象的默认字符串说明的 String 值。由内置方法 Object.prototype.toString 调用。
+
+#### `Symbol.unscopables`
+
+一个对象，其自己的属性名是从关联对象的“ with”环境绑定中排除的属性名。
+
+## 三斜杠指令
+
+三重斜杠指令是包含单个 XML 标记的单行注释。注释的内容用作编译器指令。
+
+三重斜杠指令只在其包含文件的顶部有效。三重斜杠指令前面只能有单行或多行注释，包括其他三重斜杠指令。如果它们出现在语句或声明之后，它们将被视为常规的单行注释，并且没有特殊含义。
+
+### `/// <reference path="..." />`
+
+`/// <reference path="..." />`指令是这个组里最常用的指令。它作为文件之间的依赖的声明服务。
+
+三斜杠指令指导编译器在编译过程中包含额外的文件。
+
+在使用 -- out 或 -- outFile 时，它们还充当对输出进行排序的方法。在预处理通过之后，文件按照与输入相同的顺序生成到输出文件位置。
+
+### 预处理输入文件
+
+编译器对输入文件执行预处理，以解析所有的三重斜杠引用指令。在此过程中，将向编译中添加其他文件。
+
+这个过程从一组根文件开始; 这些是在命令行或 tsconfig.json 文件中的“ files”列表中指定的文件名。这些根文件按照指定的相同顺序进行预处理。在将文件添加到列表之前，将处理其中的所有三重斜杠引用，并包括它们的目标。按照在文件中看到的顺序，以深度优先的方式解析三重斜杠引用。
+
+如果使用相对路径，则相对于包含文件解析三斜杠引用路径。
+
+### Errors错误
+
+引用不存在的文件是错误的。文件对自身有三斜杠引用是错误的。
+
+### 使用`--noResolve`
+
+如果指定了编译器标志 -- noResolve，则会忽略三斜杠引用; 它们既不会导致添加新文件，也不会更改所提供文件的顺序。
+
+### `/// <reference types="..." />`
+
+类似于`/// <reference path="..." />`指令，作为依赖的声明，`/// <reference types="..." />` 指令声明对包的依赖。
+
+解析这些包名称的过程类似于解析 import 语句中的模块名称的过程。将三斜杠引用类型指令看作是声明包的导入是一种简单的方法。
+
+例如，在声明文件中包含`//< reference types = " node"/>` 声明该文件使用`@types/node/index.d.ts` 中声明的名称; 因此，该包需要与声明文件一起包含在编译中。
+
+只有在手动创建 d.ts 文件时才使用这些指令。
+
+对于在编译期间生成的声明文件，编译器会自动为您添加`/// <reference types="..." />` ; 当且仅当生成的文件使用来自被引用包的任何声明时，才会在生成的声明文件中添加 `/// <reference types="..." />`。
+
+若要在`.ts`文件里声明一个对`@types`包的依赖，使用`--types`命令行选项或在`tsconfig.json`里指定。 查看 [在`tsconfig.json`里使用`@types`，`typeRoots`和`types`](https://www.tslang.cn/docs/handbook/tsconfig-json.html#types-typeroots-and-types)了解详情。	
+
+### `/// <reference lib="..." />`
+
+此指令允许文件显式包含现有的内置 lib 文件。
+
+内置的 lib 文件以与 tsconfig.json 中的“ lib”编译器选项相同的方式被引用(例如，使用 lib = “ es2015”而不是 lib = “ lib.es2015.d.ts”等)。
+
+对于依赖内置类型的声明文件作者，如 DOM api 或内置 JS 运行时构造函数(如 Symbol 或 Iterable) ，建议使用 triple-slash-reference lib 指令。以前这些.d.ts 文件必须添加此类类型的转发/重复声明。
+
+例如，将`/// <reference lib="es2017.string" />` 添加到编译中的某个文件等价于使用 `--lib es2017.string` 进行编译。
+
+```typescript
+/// <reference lib="es2017.string" />
+"foo".padStart(4);
+```
+
+### `/// <reference no-default-lib="true"/>`
+
+此指令将文件标记为默认库。您将在 lib.d.ts 的顶部看到这个注释及其不同的变体。
+
+该指令指示编译器不要在编译中包含默认库(即 lib.d.ts)。这里的影响类似于在命令行上传递 -- noLib。
+
+还要注意，当传递了`--skipDefaultLibCheck`时，编译器只会忽略检查带有`/// <reference no-default-lib="true"/>`的文件。
+
+### `/// <amd-module />`
+
+默认情况下，AMD 模块是匿名生成的。当使用其他工具来处理结果模块时，这可能会导致问题，比如捆绑器(例如 r.js)。
+
+`Amd-module` 指令允许向编译器传递一个可选的模块名称:
+
+##### amdModule.ts
+
+```typescript
+///<amd-module name="NamedModule"/>
+export class C {}
+```
+
+将导致将名称 NamedModule 赋值给模块，作为调用 AMD define 的一部分:
+
+##### amdModule.js
+
+```js
+define("NamedModule", ["require", "exports"], function (require, exports) {
+  var C = (function () {
+    function C() {}
+    return C;
+  })();
+  exports.C = C;
+});
+```
+
+### `/// <amd-dependency />`
+
+> 注意: 此指令已被弃用。请使用`import "moduleName";`语句代替。
+
+`//< amd-dependency path = " x"/>` 通知编译器在结果模块的 require 调用中需要注入一个非 ts 模块依赖项。
+
+`Amd-dependency` 指令还可以有一个可选的 name 属性; 这允许为 amd-dependency 传递一个可选的名称:
+
+```typescript
+/// <amd-dependency path="legacy/moduleA" name="moduleA"/>
+declare var moduleA: MyType;
+moduleA.callStuff();
+```
+
+生成的 JS 代码:
+
+```js
+define(["require", "exports", "legacy/moduleA"], function (
+  require,
+  exports,
+  moduleA
+) {
+  moduleA.callStuff();
+});
+```
+
+## 类型兼容性
+
+TypeScript中的类型兼容性基于结构子类型。结构类型是一种仅基于成员关联类型的方法。这与名义类型形成对比。考虑下面的代码:
+
+```typescript
+interface Pet {
+  name: string;
+}
+class Dog {
+  name: string;
+}
+let pet: Pet;
+// OK, because of structural typing
+pet = new Dog();
+```
+
+在名义上类型化的语言(如 c # 或 Java)中，等价的代码将是一个错误，因为 Dog 类没有将自己显式地描述为 Pet 接口的一个实现者。
+
+TypeScript的结构类型系统是基于 JavaScript 代码的典型编写方式设计的。因为 JavaScript 广泛使用匿名对象，比如函数表达式和对象文本，所以用结构类型系统而不是名义类型系统来表示 JavaScript 库中的关系要自然得多。
+
+### 关于可靠性的注意事项
+
+TypeScript的类型系统允许在编译时无法知道的某些操作是安全的。当一个类型系统具有这个属性时，就说它不“健全”。允许不健全行为的地方已经被仔细考虑过了，在本文中我们将解释这些发生的地方和背后的激励场景。
+
+####  开始
+
+TypeScript的结构类型系统的基本规则是，如果 y 和 x 有至少相同的成员，那么 x 和 y 是兼容的。例如：考虑下面的融合名为Pet的接口代码，它有一个name属性。
+
+```typescript
+interface Pet {
+  name: string;
+}
+let pet: Pet;
+// dog's inferred type is { name: string; owner: string; }
+let dog = { name: "Lassie", owner: "Rudd Weatherwax" };
+pet = dog;
+```
+
+为了检查 dog 是否可以被分配给 pet，编译器检查 pet 的每个属性以在 dog 中找到相应的兼容属性。在这种情况下，dog 必须有一个名为 name 的成员，该成员是一个字符串。确实如此，所以赋值是允许的。
+
+在检查函数调用参数时也使用了同样的赋值规则:
+
+```typescript
+interface Pet {
+  name: string;
+}
+let dog = { name: "Lassie", owner: "Rudd Weatherwax" };
+function greet(pet: Pet) {
+  console.log("Hello, " + pet.name);
+}
+greet(dog); // OK
+```
+
+注意，dog 有一个额外的 owner 属性，但是这不会产生错误。在检查兼容性时，只考虑目标类型的成员(本例中为 Pet)。
+
+这个比较过程递归地进行，探索每个成员和子成员的类型。
+
+####  比较两个函数
+
+虽然比较基本类型和对象类型相对比较简单，但涉及到哪些类型的函数应该被认为是兼容的问题。让我们从两个函数的基本例子开始，这两个函数只有参数列表不同:
+
+```typescript
+let x = (a: number) => 0;
+let y = (b: number, s: string) => 0;
+y = x; // OK
+x = y; // Error
+```
+
+为了检查 x 是否可以赋值给 y，我们首先看一下参数列表。X 中的每个参数必须在 y 中有一个相应的参数，并且具有兼容的类型。注意，不考虑参数的名称，只考虑它们的类型。在这种情况下，x 的每个参数在 y 中都有一个相应的兼容参数，因此允许赋值。
+
+第二个赋值是一个错误，因为 y 有一个必需的第二个参数，而 x 没有，所以不允许赋值。
+
+你可能想知道为什么我们允许像示例 y = x 中那样‘丢弃’参数。允许这种赋值的原因是，在 JavaScript 中忽略额外的函数参数实际上是相当普遍的。例如，Array # foreach 为回调函数提供三个参数: 数组元素、其索引和包含数组。然而，提供一个只使用第一个参数的回调是非常有用的:
+
+```typescript
+let items = [1, 2, 3];
+// Don't force these extra parameters
+items.forEach((item, index, array) => console.log(item));
+// Should be OK!
+items.forEach((item) => console.log(item));
+```
+
+现在让我们来看看返回类型是如何处理的，使用两个只有返回类型不同的函数:
+
+```typescript
+let x = () => ({ name: "Alice" });
+let y = () => ({ name: "Alice", location: "Seattle" });
+x = y; // OK
+y = x; // Error, because x() lacks a location property
+```
+
+类型系统强制源函数的返回类型为目标类型返回类型的子类型。
+
+### 函数参数双向协变
+
+在比较函数参数类型时，如果源参数可以分配给目标参数，或者反之亦然，则分配成功。这是不合理的，因为调用方可能最终得到一个接受更专门化类型的函数，但调用专门化类型较少的函数。实际上，这种类型的错误是很少见的，并且允许使用许多常见的 JavaScript 模式。一个简单的例子:
+
+```typescript
+enum EventType {
+  Mouse,
+  Keyboard,
+}
+interface Event {
+  timestamp: number;
+}
+interface MyMouseEvent extends Event {
+  x: number;
+  y: number;
+}
+interface MyKeyEvent extends Event {
+  keyCode: number;
+}
+function listenEvent(eventType: EventType, handler: (n: Event) => void) {
+  /* ... */
+}
+// Unsound, but useful and common
+listenEvent(EventType.Mouse, (e: MyMouseEvent) => console.log(e.x + "," + e.y));
+// Undesirable alternatives in presence of soundness
+listenEvent(EventType.Mouse, (e: Event) =>
+  console.log((e as MyMouseEvent).x + "," + (e as MyMouseEvent).y)
+);
+listenEvent(EventType.Mouse, ((e: MyMouseEvent) =>
+  console.log(e.x + "," + e.y)) as (e: Event) => void);
+// Still disallowed (clear error). Type safety enforced for wholly incompatible types
+listenEvent(EventType.Mouse, (e: number) => console.log(e));
+```
+
+当这种情况通过编译器标志 strictFunctionTypes 发生时，可以让 TypeScript 引发错误。
+
+### 可选参数和剩余参数
+
+在比较函数兼容性时，可选参数和所需参数是可互换的。源类型的额外可选参数不是错误，源类型中没有对应参数的目标类型的可选参数不是错误。
+
+当一个函数有一个 rest 参数时，它就被当作是一系列可选参数。
+
+从类型系统的角度来看，这是不合理的，但是从运行时的角度来看，可选参数的概念通常不能很好地执行，因为在该位置传递未定义的参数对于大多数函数是等效的。
+
+激励的例子是一个函数的常见模式，它接受一个回调函数，然后用一些可预测的参数(对程序员来说)调用它，但是对于类型系统来说参数的数量是未知的:
+
+```typescript
+function invokeLater(args: any[], callback: (...args: any[]) => void) {
+  /* ... Invoke callback with 'args' ... */
+}
+// Unsound - invokeLater "might" provide any number of arguments
+invokeLater([1, 2], (x, y) => console.log(x + ", " + y));
+// Confusing (x and y are actually required) and undiscoverable
+invokeLater([1, 2], (x?, y?) => console.log(x + ", " + y));
+```
+
+### 带有重载的函数
+
+当函数有重载时，源类型中的每个重载都必须通过目标类型上的兼容签名进行匹配。这确保了在与源函数相同的所有情况下都可以调用目标函数。
+
+### 枚举
+
+枚举与数字兼容，数字与枚举兼容。不同枚举类型的枚举值被认为是不兼容的。比如说,
+
+```typescript
+enum Status {
+  Ready,
+  Waiting,
+}
+enum Color {
+  Red,
+  Blue,
+  Green,
+}
+let status = Status.Ready;
+status = Color.Green; // Error
+```
+
+### 类
+
+类的工作方式与对象文本类型和接口类似，但有一个例外: 它们同时具有静态类型和实例类型。比较类类型的两个对象时，只比较实例的成员。静态成员和构造函数不影响兼容性。
+
+```typescript
+class Animal {
+  feet: number;
+  constructor(name: string, numFeet: number) {}
+}
+class Size {
+  feet: number;
+  constructor(numFeet: number) {}
+}
+let a: Animal;
+let s: Size;
+a = s; // OK
+s = a; // OK
+```
+
+### 类中的私有成员和受保护成员
+
+类中的私有成员和受保护成员影响其兼容性。当检查类的实例是否兼容时，如果目标类型包含私有成员，则源类型还必须包含来自同一类的私有成员。同样，这也适用于具有受保护成员的实例。这允许赋值与其超类兼容，但不允许赋值与来自不同继承层次结构的类兼容，否则它们具有相同的形状。
+
+### 泛型
+
+由于 TypeScript 是结构类型系统，类型参数只在作为成员类型的一部分使用时才会影响结果类型。比如说,
+
+```typescript
+interface Empty<T> {}
+let x: Empty<number>;
+let y: Empty<string>;
+x = y; // OK, because y matches structure of x
+```
+
+在上面的例子中，x 和 y 是兼容的，因为它们的结构不使用类型参数进行微分。通过添加一个成员到 Empty < t > 来改变这个例子，可以看到这是如何工作的:
+
+```typescript
+interface NotEmpty<T> {
+  data: T;
+}
+let x: NotEmpty<number>;
+let y: NotEmpty<string>;
+x = y; // Error, because x and y are not compatible
+```
+
+通过这种方式，具有指定的类型参数的泛型类型与非泛型类型类似。
+
+对于没有指定其类型参数的泛型类型，可以通过在所有未指定的类型参数上指定`any`来检查兼容性。然后检查结果类型的兼容性，就像在非泛型情况下一样。
+
+比如说,
+
+```typescript
+let identity = function <T>(x: T): T {
+  // ...
+};
+let reverse = function <U>(y: U): U {
+  // ...
+};
+identity = reverse; // OK, because (x: any) => any matches (y: any) => any
+```
+
+###  高级主题
+
+#### 子类型与赋值
+
+到目前为止，我们使用了“ compatible”，这不是语言规范中定义的术语。在 TypeScript 中，有两种兼容性: 子类型和赋值。这些不同之处仅在于，赋值扩展了规则的子类型兼容性，允许赋值与任意子类型之间以及赋值与相应数值与枚举之间的相互作用。
+
+语言中不同的地方使用两种兼容机制中的一种，这取决于具体情况。出于实用目的，类型兼容性取决于赋值兼容性，即使在 implements 和 extends 子句的情况下也是如此。
+
+#### `Any`,`unknown`,`object`,`void`,`undefined`,`null`, 和`never`可复制型
+
+下列表格概括了一些抽象类型之间的可赋值性。行表示每一个赋值给谁。列表示什么可赋值给他们。 ”✓”指示合并，仅仅当 [`--strictNullChecks`](https://www.typescriptlang.org/tsconfig#strictNullChecks)关闭的时候它是适配的。
+
+|             |         |        |       |           |       |       |      |
+| :---------: | :-----: | :----: | :---: | :-------: | :---: | :---: | ---- |
+|     any     | unknown | object | void  | undefined | null  | never |      |
+|    any →    |         | **✓**  | **✓** |   **✓**   | **✓** | **✓** | ✕    |
+|  unknown →  |  **✓**  |        |   ✕   |     ✕     |   ✕   |   ✕   | ✕    |
+|  object →   |  **✓**  | **✓**  |       |     ✕     |   ✕   |   ✕   | ✕    |
+|   void →    |  **✓**  | **✓**  |   ✕   |           |   ✕   |   ✕   | ✕    |
+| undefined → |  **✓**  | **✓**  |   ✓   |   **✓**   |       |   ✓   | ✕    |
+|   null →    |  **✓**  | **✓**  |   ✓   |     ✓     |   ✓   |       | ✕    |
+|   never →   |  **✓**  | **✓**  | **✓** |   **✓**   | **✓** | **✓** |      |
+
+重申基本类型：
+
+* 任何东西都可以分配给它自己。
+* `any`和`unknown`都是相同的，就什么是可赋值给他们。不同的是，`unknown`是不可以赋值给除`any`之外的任何类型。
+* unknown和never就像是对方的倒置。任何东西都可以赋值给unknown，never可以赋值给任何类型。没有任何类型是不可以赋值给never的，unknown是不可以赋值给除any之外的任何类型的。
+* void不可以赋值给任何类型，并且不可以被任何类型赋值，但有以下例外：any，unknown，never，undefined，和null（如果--strictNullChecks关闭，请参见表格了解详情）。
+* 当--strictNullChecks关闭，null和undefined和never相似：可以赋值给大多数类型，大多数类型不可以赋值给他们。他们可以赋值给彼此。
+* 当--strictNullChecks打开，null和undefined表现得像void：不会赋值给任何类型，不会从任何类型赋值，除了any，unknown，never，和void（undefined总是可以赋值给void）。
+
+## 类型推断
+
+在 TypeScript 中，有几个地方在没有显式类型注释时使用类型推断提供类型信息。例如，在这段代码中
+
+```typescript
+let x = 3;
+   //let x: number
+```
+
+X 变量的类型被推断为 number。这种推断发生在初始化变量和成员、设置参数默认值和确定函数返回类型时。
+
+在大多数情况下，类型推断是直接的。在接下来的部分中，我们将探究类型推断方式中的一些细微差别。
+
+###  最佳通用类型
+
+当由多个表达式进行类型推断时，这些表达式的类型用于计算“最佳公共类型”。比如说,
+
+```typescript
+let x = [0, 1, null];
+   //let x: (number | null)[]
+```
+
+要在上面的例子中推断 x 的类型，我们必须考虑每个数组元素的类型。对于数组的类型，我们有两个选择: number 和 null。最佳通用类型算法考虑每个候选类型，并选择与所有其他候选类型兼容的类型。
+
+因为必须从提供的候选类型中选择最佳公共类型，所以在某些情况下，类型共享一个公共结构，但没有一个类型是所有候选类型的超类型。例如:
+
+```typescript
+let zoo = [new Rhino(), new Elephant(), new Snake()];
+    //let zoo: (Rhino | Elephant | Snake)[]
+```
+
+理想情况下，我们可能希望 zoo 被推断为 Animal [] ，但是因为数组中没有严格属于 Animal 类型的对象，所以我们不会推断数组元素的类型。为了纠正这个错误，当没有一个类型是所有其他候选类型的超类型时，显式地提供类型:
+
+```typescript
+let zoo: Animal[] = [new Rhino(), new Elephant(), new Snake()];
+    //let zoo: Animal[]
+```
+
+如果没有找到最佳公共类型，则结果推断为联合数组类型(Rhino | Elephant | Snake)[]。
+
+### 上下文类型
+
+类型推断在TypeScript中的某些情况下也适用于“其他方向”。这就是所谓的“上下文类型”。当表达式的类型由其位置隐含时，就会发生上下文类型。例如:
+
+```typescript
+window.onmousedown = function (mouseEvent) {
+  console.log(mouseEvent.button); //<- OK
+  console.log(mouseEvent.kangaroo); //<- Error!
+};
+```
+
+这里，TypeScript 类型检查器使用 Window.onmousedown 函数的类型来推断赋值右侧的函数表达式的类型。这样做时，它能够推断 mouseEvent 参数的类型，该参数确实包含一个button属性，但不包含kangaroo属性。
+
+TypeScript很聪明，能够推断其他上下文中的类型:
+
+```typescript
+window.onscroll = function (uiEvent) {
+  console.log(uiEvent.button); //<- Error!
+};
+```
+
+基于上面的函数被赋值给 `Window.onscroll` 这一事实，TypeScript知道 uilevent 是一个 uilevent，而不是像前面的示例那样的 MouseEvent。对象不包含button属性，因此 TypeScript 将抛出一个错误。
+
+如果这个函数不在上下文类型的位置，函数的参数将隐式地具有any类型，并且不会发出任何错误(除非您使用 -- noImplicitAny 选项) :
+
+```typescript
+const handler = function (uiEvent) {
+  console.log(uiEvent.button); //<- OK
+};
+```
+
+我们也可以显式地为函数的参数提供类型信息，以覆盖任何上下文类型:
+
+```typescript
+window.onscroll = function (uiEvent: any) {
+  console.log(uiEvent.button); //<- Now, no error is given
+};
+```
+
+但是，此代码将记录undefined的内容，因为 uiEvent 没有名为 button 的属性。
+
+上下文类型在许多情况下都适用。常见的情况包括函数调用的参数、赋值的右边、类型断言、对象和数组文字的成员以及返回语句。上下文类型还充当最佳通用类型中的候选类型。例如:
+
+```typescript
+function createZoo(): Animal[] {
+  return [new Rhino(), new Elephant(), new Snake()];
+}
+```
+
+在本例中，最佳通用类型有一组四个候选类型: Animal、 Rhino、 Elephant 和 Snake。其中，动物可以选择最好的通用类型算法。
+
+## 变量声明
+
+let 和 const 是 JavaScript 中变量声明的两个相对较新的概念。正如我们前面提到的，let 在某些方面类似于 var，但是允许用户避免一些用户在 JavaScript 中遇到的常见“陷阱”。
+
+`const` 是`let`的扩展，它可以防止对变量的重新赋值。
+
+由于 TypeScript 是 JavaScript 的一个扩展，这种语言自然而然地支持 let 和 const。在这里，我们将详细说明这些新的声明，以及为什么它们比 var 更可取。
+
+如果你已经随手使用过 JavaScript，下一节可能是一个刷新记忆的好方法。如果您非常熟悉 JavaScript 中 var 声明的所有怪异之处，那么您可能会发现跳过这些内容会更容易。
+
+### `var`声明
+
+在 JavaScript 中声明一个变量通常是通过 var 关键字来完成的。
+
+```typescript
+var a = 10;
+```
+
+正如您可能已经知道的那样，我们刚刚声明了一个名为 a 的变量，其值为10。
+
+我们也可以在函数中声明一个变量:
+
+```typescript
+function f() {
+  var message = "Hello, world!";
+  return message;
+}
+```
+
+我们也可以在其他函数中访问这些变量:
+
+```typescript
+function f() {
+  var a = 10;
+  return function g() {
+    var b = a + 1;
+    return b;
+  };
+}
+var g = f();
+g(); // returns '11'
+```
+
+在上面的示例中，g 捕获了在 f 中声明的变量 a。在 g 被调用的任何一点上，a 的值都会和 f 中的 a 的值绑定在一起。即使 g 被调用了，它也能够访问和修改 a。
+
+```typescript
+function f() {
+  var a = 1;
+  a = 2;
+  var b = g();
+  a = 3;
+  return b;
+  function g() {
+    return a;
+  }
+}
+f(); // returns '2'
+```
+
+### 作用域规则
+
+对于其他语言，var 声明有一些奇怪的作用域规则:
+
+```typescript
+function f(shouldInitialize: boolean) {
+  if (shouldInitialize) {
+    var x = 10;
+  }
+  return x;
+}
+f(true); // returns '10'
+f(false); // returns 'undefined'
+```
+
+有些读者可能会对这个例子反复思考。变量 x 是在 if 块内声明的，但是我们能够从该块外部访问它。这是因为 var 声明可以在它们的包含函数、模块、名称空间或全局作用域中的任何地方访问——这些我们将在后面介绍——不管包含的块是什么。有些人称之为变量范围或函数范围。参数也是函数范围的。
+
+这些作用域规则可能导致几种类型的错误。他们加剧的一个问题是，多次声明同一个变量并不是一个错误:
+
+```typescript
+function sumMatrix(matrix: number[][]) {
+  var sum = 0;
+  for (var i = 0; i < matrix.length; i++) {
+    var currentRow = matrix[i];
+    for (var i = 0; i < currentRow.length; i++) {
+      sum += currentRow[i];
+    }
+  }
+  return sum;
+}
+```
+
+对于一些有经验的 JavaScript 开发人员来说，可能很容易识别出来，但是内部 for-loop 会意外地覆盖变量 i，因为我引用的是同一个函数范围的变量。正如经验丰富的开发人员现在所知道的，类似的错误通过了代码审查，并可能成为无穷无尽的挫折源。
+
+###  捕获变量的怪癖
+
+快速猜一下下面这个片段的输出是什么:
+
+```typescript
+for (var i = 0; i < 10; i++) {
+  setTimeout(function () {
+    console.log(i);
+  }, 100 * i);
+}
+```
+
+对于那些不熟悉 setTimeout 的用户，它会尝试在一定的毫秒之后执行一个函数(尽管等待其他任何东西停止运行)。
+
+准备好了吗? 来看看:
+
+```typescript
+10
+10
+10
+10
+10
+10
+10
+10
+10
+10
+```
+
+许多 JavaScript 开发人员都非常熟悉这种行为，但是如果你感到惊讶的话，你肯定不是唯一的一个。大多数人希望输出是
+
+```typescript
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+
+还记得我们前面提到的变量捕获吗？我们传递给 setTimeout 的每个函数表达式实际上都从相同的作用域引用相同的 i。
+
+让我们花一分钟考虑一下这意味着什么。setTimeout 将在某个毫秒数之后运行一个函数，但仅在 for 循环停止执行之后; 当 for 循环停止执行时，i 的值为10。所以每次调用给定的函数，它都会打印出10！
+
+一个常见的方法是使用 IIFE ——即时调用函数表达式——在每次迭代中捕获 i:
+
+```typescript
+for (var i = 0; i < 10; i++) {
+  // capture the current state of 'i'
+  // by invoking a function with its current value
+  (function (i) {
+    setTimeout(function () {
+      console.log(i);
+    }, 100 * i);
+  })(i);
+}
+```
+
+这种奇怪的图案实际上相当普遍。参数列表中的 i 实际上影射了 for 循环中声明的 i，但是因为我们给它们命名相同，所以我们不必过多地修改循环体。
+
+### `let`声明
+
+到目前为止，您已经发现 var 存在一些问题，这正是 let 语句被引入的原因。除了使用关键字之外，还可以使用 var 语句的相同方式编写语句。
+
+```typescript
+let hello = "Hello!";
+```
+
+关键的区别不在于语法，而在于语义，我们现在将深入探讨语义。
+
+### 块作用域
+
+当使用 let 声明变量时，它使用所谓的词法作用域或块作用域。与使用 var 声明的变量不同，变量的作用域泄漏到它们的包含函数，块作用域变量在它们最近的包含块或 for-loop 之外不可见。
+
+```typescript
+function f(input: boolean) {
+  let a = 100;
+  if (input) {
+    // Still okay to reference 'a'
+    let b = a + 1;
+    return b;
+  }
+  // Error: 'b' doesn't exist here
+  return b;
+}
+```
+
+这里，我们有两个局部变量 a 和 b。 a 的作用域局限于 f 的主体，而 b 的作用域局限于包含 if 语句的块。
+
+Catch 子句中声明的变量也有类似的作用域规则。
+
+```typescript
+try {
+  throw "oh no!";
+} catch (e) {
+  console.log("Oh well.");
+}
+// Error: 'e' doesn't exist here
+console.log(e);
+```
+
+块作用域变量的另一个属性是，在实际声明它们之前，不能读取或写入它们。虽然这些变量在其整个范围内都是”存在的”，但在其声明之前的所有点都是其时间死区的一部分。这只是一种复杂的说法，你不能在 let 语句之前访问它们，幸运的是 TypeScript 会让你知道这一点。
+
+```typescript
+a++; // illegal to use 'a' before it's declared;
+let a;
+```
+
+需要注意的是，您仍然可以在声明块范围的变量之前捕获它。唯一的问题是，在声明之前调用该函数是非法的。如果目标是 ES2015，现代运行时将抛出一个错误; 然而，目前 TypeScript 是许可的，不会将其作为错误报告。
+
+```typescript
+function foo() {
+  // okay to capture 'a'
+  return a;
+}
+// illegal call 'foo' before 'a' is declared
+// runtimes should throw an error here
+foo();
+let a;
+```
+
+更多关于时间死区的信息，请参阅 Mozilla Developer Network 地理杂志的相关内容。
+
+###  重申和隐藏
+
+对于 var 声明，我们提到，声明变量的次数并不重要，重要的是得到一个变量。
+
+```typescript
+function f(x) {
+  var x;
+  var x;
+  if (true) {
+    var x;
+  }
+}
+```
+
+在上面的例子中，x 的所有声明实际上都指向同一个 x，这是完全有效的。这通常会导致 bug 的产生。值得庆幸的是，let声明不那么宽容。
+
+```typescript
+let x = 10;
+let x = 20; / error: can't re-declare 'x' in the same scope
+```
+
+这两个变量不一定都需要为TypeScript进行块范围划分，以告诉我们存在问题。
+
+```typescript
+function f(x) {
+  let x = 100; // error: interferes with parameter declaration
+}
+function g() {
+  let x = 100;
+  var x = 100; // error: can't have both declarations of 'x'
+}
+```
+
+这并不是说块范围的变量永远不能用函数范围的变量声明。块范围的变量只需要在一个明显不同的块中声明。
+
+```typescript
+这并不是说块范围的变量永远不能用函数范围的变量声明。块范围的变量只需要在一个明显不同的块中声明。
+
+function f(condition, x) {
+  if (condition) {
+    let x = 100;
+    return x;
+  }
+  return x;
+}
+f(false, 0); // returns '0'
+f(true, 0); // returns '100'
+```
+
+在更嵌套的作用域中引入新名称的行为称为隐藏。这有点像一把双刃剑，因为它可以在意外阴影的情况下自行引入某些 bug，同时也可以防止某些 bug 的产生。例如，假设我们使用 let 变量编写了前面的 sumMatrix 函数。
+
+```typescript
+function sumMatrix(matrix: number[][]) {
+  let sum = 0;
+  for (let i = 0; i < matrix.length; i++) {
+    var currentRow = matrix[i];
+    for (let i = 0; i < currentRow.length; i++) {
+      sum += currentRow[i];
+    }
+  }
+  return sum;
+}
+```
+
+这个版本的循环实际上将正确地执行求和，因为内部循环的 i 在外部循环中阴影为 i。
+
+为了编写更清晰的代码，通常应该避免隐藏。虽然在某些情况下，利用它可能是合适的，你应该使用你的最佳判断。
+
+### 块作用域的变量捕获
+
+当我们第一次涉及到用 var 声明捕获变量的思想时，我们简要地介绍了一旦捕获变量是如何工作的。为了更好地理解这一点，每次运行一个作用域时，它都会创建一个变量的“环境”。该环境及其捕获的变量可以在其作用域内的所有内容都完成执行之后仍然存在。
+
+```typescript
+function theCityThatAlwaysSleeps() {
+  let getCity;
+  if (true) {
+    let city = "Seattle";
+    getCity = function () {
+      return city;
+    };
+  }
+  return getCity();
+}
+```
+
+因为我们已经从它的环境中捕获了`city`，所以我们仍然能够访问它，尽管事实上 if 块已经完成了执行。
+
+回想一下前面的 setTimeout 示例，我们最终需要使用 IIFE 为 for 循环的每次迭代捕获变量的状态。实际上，我们所做的就是为捕获的变量创建一个新的变量环境。这是一个有点痛苦的过程，但幸运的是，你再也不用在TypeScript中这样做了。
+
+let声明在作为循环的一部分声明时具有截然不同的行为。这些声明不仅仅是向循环本身引入一个新的环境，而是在某种程度上为每个迭代创建一个新的作用域。因为这就是我们用IIEE正在做的任何事，我们可以改变我们以前的 setTimeout 例子，只使用一个 let 声明。
+
+```typescript
+for (let i = 0; i < 10; i++) {
+  setTimeout(function () {
+    console.log(i);
+  }, 100 * i);
+}
+```
+
+正如所料，这个会打印出来
+
+```typescript
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+
+### `const`声明
+
+Const 声明是声明变量的另一种方式。
+
+```typescript
+const numLivesForCat = 9;
+```
+
+它们就像 let 声明，但是，顾名思义，它们的值一旦被绑定就不能更改。换句话说，它们具有与 let 相同的作用域规则，但不能重新赋值给它们。
+
+这不应与它们所引用的值是不可变的这一概念相混淆。
+
+```typescript
+const numLivesForCat = 9;
+const kitty = {
+  name: "Aurora",
+  numLives: numLivesForCat,
+};
+// Error
+kitty = {
+  name: "Danielle",
+  numLives: numLivesForCat,
+};
+// all "okay"
+kitty.name = "Rory";
+kitty.name = "Kitty";
+kitty.name = "Cat";
+kitty.numLives--;
+```
+
+除非采取特定措施来避免它，否则 const 变量的内部状态仍然是可修改的。幸运的是，TypeScript 允许您指定对象的成员是只读的。关于接口的章节有详细介绍。
+
+### `let`vs.`const`
+
+鉴于我们有两种具有类似作用域语义的声明类型，我们自然会问应该使用哪一种。像大多数宽泛的问题一样，答案是: 要看情况而定。
+
+应用最小特权原则，除了计划修改的声明之外，所有声明都应使用 const。其基本原理是，如果一个变量不需要被写入，那么在同一个代码库中工作的其他人就不能自动地写入对象，并且需要考虑他们是否真的需要重新赋值给该变量。在推理数据流时，使用 const 还可以使代码更具可预测性。
+
+运用你最好的判断力，如果可行的话，与你团队的其他成员商量此事。
+
+这本手册大多数使用 let 声明。
+
+### 解构
+
+另一个 ECMAScript 2015的特性是解构。有关完整的参考资料，请参阅《 Mozilla Developer Network 文章。在本节中，我们将简要介绍一下。
+
+#### 解构数组
+
+最简单的解构形式是数组解构赋值:
+
+```typescript
+let input = [1, 2];
+let [first, second] = input;
+console.log(first); // outputs 1
+console.log(second); // outputs 
+```
+
+这将创建两个名为 first 和 second 的新变量，这相当于使用索引，但要方便得多:
+
+```typescript
+first = input[0];
+second = input[1];
+```
+
+析构化也可以处理已声明的变量:
+
+```typescript
+// swap variables
+[first, second] = [second, first];
+```
+
+以及函数的参数:
+
+```typescript
+function f([first, second]: [number, number]) {
+  console.log(first);
+  console.log(second);
+}
+f([1, 2]);
+```
+
+你可以为列表中剩下的项目创建一个变量，使用... :
+
+```typescript
+let [first, ...rest] = [1, 2, 3, 4];
+console.log(first); // outputs 1
+console.log(rest); // outputs [ 2, 3, 4 ]
+```
+
+当然，因为这是 JavaScript，你可以忽略你不关心的尾随元素:
+
+```typescript
+let [first] = [1, 2, 3, 4];
+console.log(first); // outputs 1
+```
+
+或者其他元素:
+
+```typescript
+let [, second, , fourth] = [1, 2, 3, 4];
+console.log(second); // outputs 2
+console.log(fourth); // outputs 4
+```
+
+#### 解构元组
+
+元组可以像数组一样被解构化; 解构化变量得到相应元组元素的类型:
+
+```typescript
+let tuple: [number, string, boolean] = [7, "hello", true];
+let [a, b, c] = tuple; // a: number, b: string, c: boolean
+```
+
+将元组拆分到元素的范围之外是一个错误:
+
+```typescript
+let [a, b, c, d] = tuple; // Error, no element at index 3
+```
+
+与使用数组一样，您可以使用... 对元组的其余部分进行重构，以得到一个更短的元组:
+
+```typescript
+let [a, ...bc] = tuple; // bc: [string, boolean]
+let [a, b, c, ...d] = tuple; // d: [], the empty tuple
+```
+
+或者忽略尾随元素，或者其他元素:
+
+```typescript
+let [a] = tuple; // a: number
+let [, b] = tuple; // b: string
+```
+
+#### 解构对象
+
+你也可以解构对象:
+
+```typescript
+let o = {
+  a: "foo",
+  b: 12,
+  c: "bar",
+};
+let { a, b } = o;
+```
+
+这将创建来自 o.a 和 o.b 的新变量 a 和 b。注意，如果不需要，可以跳过 c。
+
+像数组解构一样，你可以不用声明就有赋值:
+
+```typescript
+({ a, b } = { a: "baz", b: 101 });
+```
+
+注意，我们必须在这个语句外层加上括号。正常JavaScript把一个`{`解析为block的开始。
+
+你可以使用这样的语法`...`为对象的剩余元素里创建一个变量。
+
+```typescript
+let { a, ...passthrough } = o;
+let total = passthrough.b + passthrough.c.length;
+```
+
+##### 属性重命名
+
+你也可以给属性起不同的名字:
+
+```typescript
+let { a: newName1, b: newName2 } = o;
+```
+
+在这里，语法开始变得混乱。你可以把: newName1读作“ a as newName1”。方向是从左到右，就像你写的那样:
+
+```typescript
+let newName1 = o.a;
+let newName2 = o.b;
+```
+
+令人困惑的是，这里的冒号并不表示类型。如果您指定了类型，那么仍然需要在整个解构化之后写入类型:
+
+```typescript
+let { a, b }: { a: string; b: number } = o;
+```
+
+##### 默认值
+
+默认值允许您在属性未定义的情况下指定默认值:
+
+```typescript
+function keepWholeObject(wholeObject: { a: string; b?: number }) {
+  let { a, b = 1001 } = wholeObject;
+}
+```
+
+在这个例子中，b？表示 b 是可选的，所以可能没有定义。keepWholeObject 现在有了 wholeObject 的变量以及属性 a 和 b，即使 b 没有定义。
+
+##### 函数声明
+
+析构化也可以用在函数声明中。对于简单的情况，这是很直接的:
+
+```typescript
+type C = { a: string; b?: number };
+function f({ a, b }: C): void {
+  // ...
+}
+```
+
+但是为参数指定默认值更为常见，并且使用析构化正确地指定默认值可能比较棘手。首先，您需要记住将模式放在缺省值之前。
+
+```typescript
+function f({ a = "", b = 0 } = {}): void {
+  // ...
+}
+f();
+```
+
+> 上面的代码片段是类型推断的一个例子，在手册的前面已经解释过了。
+
+然后，您需要记住为解构属性而不是主初始值设定项上的可选属性设置默认值。记住 c 的定义是 b 可选的:
+
+```typescript
+function f({ a, b = 0 } = { a: "" }): void {
+  // ...
+}
+f({ a: "yes" }); // ok, default b = 0
+f(); // ok, default to { a: "" }, which then defaults b = 0
+f({}); // error, 'a' is required if you supply an argument
+```
+
+小心使用解构。正如前面的示例所示，除了最简单的解构表达式之外，任何表达式都是令人困惑的。对于深嵌套的解构化来说尤其如此，即使没有重命名、默认值和类型注释，也很难理解它。尝试保持解构表达式小而简单。您始终可以编写解构化将自己生成的赋值。
+
+#### 展开
+
+展开运算符与解构运算符相反。它允许您将一个数组扩展到另一个数组中，或者将一个对象扩展到另一个对象中。例如:
+
+```typescript
+let first = [1, 2];
+let second = [3, 4];
+let bothPlus = [0, ...first, ...second, 5];
+```
+
+这就给了两加值[0,1,2,3,4,5]。传播创造了一个`first`和`second`的浅拷贝。它们不会因为展开而改变。
+
+你也可以展开对象:
+
+```
+let defaults = { food: "spicy", price: "$$", ambiance: "noisy" };
+let search = { ...defaults, food: "rich" };
+```
+
+现在的`search`是`{ food: “ rich”，price: “ $$”，ambiance: “ noisy”}`。对象展开和数组展开更复杂。像数组展开一样，他从左到右进行，但结果仍然是一个对象。这意味着在展开对象中稍后出现的属性会覆盖先前出现的属性。因此，如果我们修改前面的例子，使其在结尾处展开：
+
+```typescript
+let defaults = { food: "spicy", price: "$$", ambiance: "noisy" };
+let search = { food: "rich", ...defaults };
+```
+
+然后`defaults`中的`food`属性覆盖了`food: "rich"`,这不是我们在这种情况下想要的。
+
+对象展开还有其他一些令人惊讶的限制。首先，它只包含对象自己的可枚举属性。基本上，这意味着当你展开一个对象的实例时，你会丢失方法:
+
+```typescript
+class C {
+  p = 12;
+  m() {}
+}
+let c = new C();
+let clone = { ...c };
+clone.p; // ok
+clone.m(); // error!
+```
+
+其次，TypeScript 编译器不允许类型参数从泛型函数展开。这一特性将在该语言的未来版本中得到体现。
 
